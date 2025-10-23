@@ -24,14 +24,14 @@
 - `debug_import.py` - 导入调试脚本
 - `fix_evaluate.py` - 评估修复脚本
 - `botorch_functions.py` - 早期的BoTorch函数实现
-- `consolidated_functions.py` - 旧的综合函数文件（根目录版本）
+- `synthetic_functions.py` - 旧的综合函数文件（根目录版本）
 
 ## 已删除的文件
 
 以下文件已被永久删除（不可恢复）：
 
 1. **备份文件**
-   - `bomegabench/functions/consolidated_functions_old.py.bak`
+   - `bomegabench/functions/synthetic_functions_old.py.bak`
 
 2. **旧配置文件**
    - `requirements.txt` (已被 `pyproject.toml` 替代)

@@ -26,7 +26,7 @@ BOMegaBench/
 │   └── functions/                        # Function implementations (~4,000 LOC)
 │       ├── __init__.py                   # Suite imports & re-exports
 │       ├── registry.py                   # Central function discovery (261 LOC)
-│       ├── consolidated_functions.py     # 72 synthetic functions (1,965 LOC)
+│       ├── synthetic_functions.py     # 72 synthetic functions (1,965 LOC)
 │       ├── lasso_bench.py               # LassoBench wrapper (261 LOC)
 │       ├── hpo_benchmarks.py            # HPO via Bayesmark (313 LOC)
 │       ├── hpobench_benchmarks.py       # HPOBench integration (585 LOC)
@@ -45,7 +45,7 @@ BOMegaBench/
 
 | Suite Name | Size | Source | Type | Status |
 |---|---|---|---|---|
-| consolidated | 72 | Native | Synthetic (BBOB, Classical) | Core |
+| synthetic | 72 | Native | Synthetic (BBOB, Classical) | Core |
 | lasso_synthetic | 8 | LassoBench | High-dim regression | Optional |
 | lasso_real | 5 | LassoBench | Real-world regression | Optional |
 | hpo | 100+ | Bayesmark | ML hyperparameter optimization | Optional |
@@ -86,7 +86,7 @@ BOMegaBench/
 ┌──────────────┴──────────────────────────┐
 │    IMPLEMENTATION LAYER                 │
 │  BenchmarkFunction subclasses           │
-│  Consolidated, Lasso, HPO, DB wrappers  │
+│  Synthetic, Lasso, HPO, DB wrappers  │
 │  External system integration            │
 └─────────────────────────────────────────┘
 ```
@@ -143,7 +143,7 @@ __iter__, __len__, __getitem__
 **Pattern Implementation**:
 ```python
 _SUITES: Dict[str, BenchmarkSuite] = {
-    "consolidated": ConsolidatedSuite,  # Always available
+    "synthetic": SyntheticSuite,  # Always available
     "lasso_synthetic": ...,             # Optional (try/except)
     "hpo": ...,                         # Optional
     ...
@@ -162,9 +162,9 @@ list_suites()                               # Available suites
 
 ## 3. Existing Benchmark Suites
 
-### 3.1 Consolidated Suite (72 Functions)
+### 3.1 Synthetic Suite (72 Functions)
 
-**Structure**: All functions defined in `consolidated_functions.py` (1,965 LOC)
+**Structure**: All functions defined in `synthetic_functions.py` (1,965 LOC)
 
 **Organization**:
 - **BBOB** (24 functions): Standard Black-Box Optimization Benchmark
@@ -200,14 +200,14 @@ class FunctionName(BenchmarkFunction):
         # Vectorized computation
         return torch.sum(X**2, dim=-1)
 
-def create_consolidated_suite() -> BenchmarkSuite:
+def create_synthetic_suite() -> BenchmarkSuite:
     functions = {
         "sphere": F01_Sphere(),
         ...
     }
-    return BenchmarkSuite("consolidated", functions)
+    return BenchmarkSuite("synthetic", functions)
 
-ConsolidatedSuite = create_consolidated_suite()
+SyntheticSuite = create_synthetic_suite()
 ```
 
 ### 3.2 LassoBench Integration (13 Functions)
@@ -463,7 +463,7 @@ tqdm>=4.62.0         # Progress bars
 
 ### 7.1 Code Quality Issues
 
-#### Issue 1: Monolithic consolidated_functions.py (1,965 LOC)
+#### Issue 1: Monolithic synthetic_functions.py (1,965 LOC)
 **Problem**: Single file contains 72 function definitions
 - Hard to navigate
 - Difficult to maintain
@@ -472,7 +472,7 @@ tqdm>=4.62.0         # Progress bars
 
 **Recommended Refactoring**:
 ```
-consolidated_functions/
+synthetic_functions/
 ├── __init__.py          # Suite creation & exports
 ├── bbob.py              # 24 BBOB functions
 ├── botorch_additional.py # 6 BoTorch functions
@@ -548,7 +548,7 @@ def create_continuous_space(self) -> List[Dict[str, Any]]:
 **Recommended Pattern**:
 ```python
 _SUITES_LAZY: Dict[str, Callable[[], BenchmarkSuite]] = {
-    "consolidated": create_consolidated_suite,  # Cached after first call
+    "synthetic": create_synthetic_suite,  # Cached after first call
     "hpobench_ml": create_hpobench_ml_suite,    # Lazy loaded
 }
 
@@ -641,7 +641,7 @@ docs/
 
 ## 8. Current Integration Status
 
-### Consolidated Suite ✓ COMPLETE
+### Synthetic Suite ✓ COMPLETE
 - Status: Fully implemented (72 functions)
 - Quality: Production-ready
 - Documentation: Good
@@ -678,7 +678,7 @@ docs/
 
 ### Priority 1: Code Organization (Medium Effort)
 
-1. **Refactor consolidated_functions.py**
+1. **Refactor synthetic_functions.py**
    - Split into submodules (bbob.py, classical_*.py, botorch_*.py)
    - Keep registry in __init__.py
    - Reduces cognitive load
@@ -699,7 +699,7 @@ docs/
 1. **Add Unit Tests for Functions**
    ```python
    tests/
-   ├── test_consolidated_functions.py
+   ├── test_synthetic_functions.py
    ├── test_lasso_bench_wrapper.py
    ├── test_hpo_benchmarks.py
    ├── test_database_tuning.py
@@ -785,7 +785,7 @@ docs/
   Benchmark runner and result tracking
 
 ### Function Implementations
-- `/mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/consolidated_functions.py` (1,965 lines)
+- `/mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/synthetic_functions.py` (1,965 lines)
   72 core synthetic functions
   
 - `/mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/hpobench_benchmarks.py` (585 lines)
@@ -839,7 +839,7 @@ BOMegaBench is a **well-conceived and solidly-implemented** Bayesian Optimizatio
 - Demonstrated patterns for new integrations
 
 **Key Areas for Improvement**:
-- Split large monolithic modules (consolidated_functions.py, database_tuning.py)
+- Split large monolithic modules (synthetic_functions.py, database_tuning.py)
 - Consolidate duplicated import patterns
 - Expand test coverage for 200+ functions
 - Add type hints throughout

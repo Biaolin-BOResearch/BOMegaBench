@@ -1,5 +1,5 @@
 """
-Consolidated Benchmark Functions
+Synthetic Benchmark Functions
 All unique functions from BBOB, BoTorch Additional, Classical Additional, and Classical modules.
 Total: 72 unique benchmark functions.
 """
@@ -1893,8 +1893,8 @@ class GoldsteinPriceFunction(BenchmarkFunction):
 # Suite Creation Functions
 # =============================================================================
 
-def create_consolidated_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> BenchmarkSuite:
-    """Create consolidated suite with all 72 unique benchmark functions."""
+def create_synthetic_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> BenchmarkSuite:
+    """Create synthetic suite with all 72 unique benchmark functions."""
     functions = {}
 
     # BBOB Functions (24)
@@ -1996,14 +1996,14 @@ def create_consolidated_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> Benc
             for dim in dimensions:
                 functions[f"{cls.__name__.replace('Function', '').lower()}_{dim}d"] = cls(dim=dim)
 
-    return BenchmarkSuite("Consolidated Functions", functions)
+    return BenchmarkSuite("Synthetic Functions", functions)
 
 
 # =============================================================================
 # Function Summary and Statistics
 # =============================================================================
 
-CONSolidated_FUNCTIONS_SUMMARY = {
+SYNTHETIC_FUNCTIONS_SUMMARY = {
     "total_unique_functions": 73,
     "bbob_functions": 24,
     "botorch_additional_functions": 6,

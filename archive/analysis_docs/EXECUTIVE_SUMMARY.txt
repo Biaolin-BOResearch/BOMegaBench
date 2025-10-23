@@ -44,7 +44,7 @@ DESIGN PATTERNS USED:
 3. BENCHMARK SUITES INVENTORY
 ================================================================================
 
-CONSOLIDATED (72 functions) - NATIVE
+SYNTHETIC (72 functions) - NATIVE
   ├─ BBOB (24): Black-Box Optimization Benchmarks
   ├─ Classical Core (10): Sphere, Rosenbrock, Styblinski-Tang, etc.
   ├─ Classical Additional (32): Schwefel, Penalized, etc.
@@ -132,7 +132,7 @@ STRENGTHS:
 ISSUES IDENTIFIED:
 
 1. MONOLITHIC FILES (MODERATE)
-   - consolidated_functions.py: 1,965 LOC (72 function definitions)
+   - synthetic_functions.py: 1,965 LOC (72 function definitions)
    - database_tuning.py: 801 LOC (mixing concerns)
    Recommendation: Split into submodules by category
 
@@ -176,7 +176,7 @@ ISSUES IDENTIFIED:
 6. INTEGRATION PATTERNS
 ================================================================================
 
-Pattern 1: NATIVE SYNTHETIC FUNCTIONS (Consolidated Suite)
+Pattern 1: NATIVE SYNTHETIC FUNCTIONS (Synthetic Suite)
 - Inherit from BenchmarkFunction
 - Implement _evaluate_true() with vectorized computation
 - Provide _get_metadata() with function properties
@@ -233,7 +233,7 @@ Installation Model:
 8. CURRENT INTEGRATION STATUS
 ================================================================================
 
-CONSOLIDATED SUITE            ✓ COMPLETE - Production ready (72 functions)
+SYNTHETIC SUITE            ✓ COMPLETE - Production ready (72 functions)
 LASSO_BENCH SUITES           ✓ COMPLETE - Production ready (13 functions)
 HPO BENCHMARKS               ✓ COMPLETE - Production ready (100+ functions)
 HPOBENCH SUITES             ✓ COMPLETE - Production ready (50+ functions)
@@ -244,7 +244,7 @@ DATABASE TUNING             ⚠️ IN PROGRESS - Core structure exists, needs te
 ================================================================================
 
 PRIORITY 1 - CODE ORGANIZATION (Medium Effort, High Impact):
-1. Refactor consolidated_functions.py → split into bbob/, classical/, botorch/
+1. Refactor synthetic_functions.py → split into bbob/, classical/, botorch/
 2. Consolidate dependency checking → util/dependencies.py
 3. Add type hints → Run mypy, fix all issues
 

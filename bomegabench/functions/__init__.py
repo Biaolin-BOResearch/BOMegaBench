@@ -2,9 +2,9 @@
 Benchmark function implementations organized by suites.
 """
 
-# Import consolidated functions suite
-from .consolidated_functions import create_consolidated_suite
-ConsolidatedSuite = create_consolidated_suite()
+# Import synthetic functions suite
+from .synthetic_functions import create_synthetic_suite
+SyntheticSuite = create_synthetic_suite()
 
 # Import LassoBench suites (with optional dependency)
 try:
@@ -224,7 +224,7 @@ from .registry import (
 )
 
 __all__ = [
-    "ConsolidatedSuite",
+    "SyntheticSuite",
     "get_function",
     "list_functions",
     "list_suites",

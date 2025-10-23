@@ -42,7 +42,7 @@ pytest
 pytest --cov=bomegabench --cov-report=html
 
 # Run specific test file
-pytest tests/test_consolidated.py
+pytest tests/test_synthetic.py
 
 # Run tests matching a pattern
 pytest -k "test_database"
@@ -275,7 +275,7 @@ my_module = require_dependency("my_package", "My new feature")
 ```
 tests/
 ├── test_core.py              # Test core functionality
-├── test_consolidated.py      # Test consolidated functions
+├── test_synthetic.py      # Test synthetic functions
 ├── test_database/            # Database tuning tests
 │   ├── test_core.py
 │   ├── test_evaluator.py

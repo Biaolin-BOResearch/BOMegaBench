@@ -24,7 +24,7 @@ BOMegaBench provides 200+ benchmark functions for evaluating Bayesian optimizati
 
 | Suite | Functions | Description |
 |-------|-----------|-------------|
-| **Consolidated** | 72 | BBOB (24) + BoTorch (6) + Classical (42) functions |
+| **Synthetic** | 72 | BBOB (24) + BoTorch (6) + Classical (42) functions |
 | **LassoBench** | 13 | High-dimensional sparse regression benchmarks |
 | **HPO** | 100+ | Machine learning hyperparameter optimization |
 | **HPOBench** | 50+ | ML, NAS, OD, and RL benchmarks |
@@ -70,9 +70,9 @@ print(func.metadata)
 
 ```python
 # Create benchmark suite
-from bomegabench import ConsolidatedSuite
+from bomegabench import SyntheticSuite
 
-suite = ConsolidatedSuite
+suite = SyntheticSuite
 func = suite["sphere_2d"]
 
 # Run benchmark with BenchmarkRunner
@@ -98,7 +98,7 @@ BOMegaBench/
 │   │   ├── dependencies.py         # ✨ Unified dependency management
 │   │   └── __init__.py
 │   └── functions/                  # Benchmark function implementations
-│       ├── consolidated/           # ✨ Modular consolidated functions (72 functions)
+│       ├── synthetic/           # ✨ Modular synthetic functions (72 functions)
 │       │   ├── __init__.py
 │       │   ├── bbob_functions.py          (599 lines - 24 BBOB functions)
 │       │   ├── botorch_additional.py      (217 lines - 6 BoTorch functions)
@@ -115,11 +115,11 @@ BOMegaBench/
 │       ├── hpo_benchmarks.py       # Bayesmark HPO benchmarks (313 lines)
 │       ├── hpobench_benchmarks.py  # HPOBench benchmarks (585 lines)
 │       ├── benchbase_wrapper.py    # BenchBase wrapper (655 lines)
-│       ├── consolidated_functions.py  # Backward compatibility layer (39 lines)
+│       ├── synthetic_functions.py  # Backward compatibility layer (39 lines)
 │       ├── database_tuning.py      # ⚠️ DEPRECATED: Use database/ instead (63 lines)
 │       └── registry.py             # Function registry (261 lines)
 ├── tests/                          # Comprehensive test suite
-│   ├── test_consolidated.py       # Consolidated functions tests
+│   ├── test_synthetic.py       # Synthetic functions tests
 │   ├── test_dependencies.py       # Dependency management tests
 │   └── test_database/             # ✨ NEW: Database tuning tests (40 tests)
 │       ├── __init__.py
@@ -184,7 +184,7 @@ mypy bomegabench/
 
 ## 📊 Benchmark Suites Details
 
-### Consolidated Suite (72 functions)
+### Synthetic Suite (72 functions)
 
 Combines classic optimization benchmarks:
 - **BBOB (24)**: Black-Box Optimization Benchmarking suite

@@ -1,20 +1,20 @@
-"""Tests for consolidated benchmark functions."""
+"""Tests for synthetic benchmark functions."""
 
 import pytest
 import torch
-from bomegabench.functions.consolidated import create_consolidated_suite
+from bomegabench.functions.synthetic import create_synthetic_suite
 
 
-def test_consolidated_suite_creation():
-    """Test that consolidated suite can be created."""
-    suite = create_consolidated_suite(dimensions=[2, 4])
+def test_synthetic_suite_creation():
+    """Test that synthetic suite can be created."""
+    suite = create_synthetic_suite(dimensions=[2, 4])
     assert len(suite) > 0
     assert "F01_SphereRaw_2d" in suite.list_functions()
 
 
 def test_sphere_function():
     """Test Sphere function evaluation."""
-    suite = create_consolidated_suite(dimensions=[2])
+    suite = create_synthetic_suite(dimensions=[2])
     sphere = suite["F01_SphereRaw_2d"]
 
     # Test at origin (should be 0)
@@ -30,7 +30,7 @@ def test_sphere_function():
 
 def test_function_metadata():
     """Test that functions have proper metadata."""
-    suite = create_consolidated_suite(dimensions=[2])
+    suite = create_synthetic_suite(dimensions=[2])
     sphere = suite["F01_SphereRaw_2d"]
 
     metadata = sphere.metadata
@@ -42,7 +42,7 @@ def test_function_metadata():
 
 def test_batch_evaluation():
     """Test batch evaluation of functions."""
-    suite = create_consolidated_suite(dimensions=[2])
+    suite = create_synthetic_suite(dimensions=[2])
     sphere = suite["F01_SphereRaw_2d"]
 
     # Evaluate batch of points

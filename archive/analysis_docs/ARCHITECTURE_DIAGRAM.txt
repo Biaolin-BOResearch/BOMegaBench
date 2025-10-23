@@ -29,7 +29,7 @@ BOMEGABENCH - ARCHITECTURE & COMPONENT DIAGRAM
 │  │ Global _SUITES Dictionary:                                          │   │
 │  │                                                                     │   │
 │  │  _SUITES = {                                                        │   │
-│  │    "consolidated": ConsolidatedSuite (72 functions) [ALWAYS AVAIL] │   │
+│  │    "synthetic": SyntheticSuite (72 functions) [ALWAYS AVAIL] │   │
 │  │    "lasso_synthetic": LassoBenchSyntheticSuite (8) [Optional]      │   │
 │  │    "lasso_real": LassoBenchRealSuite (5) [Optional]                │   │
 │  │    "hpo": HPOBenchmarksSuite (100+) [Optional]                     │   │
@@ -63,7 +63,7 @@ BOMEGABENCH - ARCHITECTURE & COMPONENT DIAGRAM
 │                                                                             │
 │  All inherit from BenchmarkFunction (abstract base class)                   │
 │  Implementations in:                                                       │
-│  ├─ consolidated_functions.py (72 functions)                              │
+│  ├─ synthetic_functions.py (72 functions)                              │
 │  ├─ lasso_bench.py (LassoBench wrapper)                                   │
 │  ├─ hpo_benchmarks.py (HPO wrapper)                                        │
 │  ├─ hpobench_benchmarks.py (HPOBench wrapper)                              │
@@ -111,7 +111,7 @@ Specific Implementations:
 
 BenchmarkFunction
   │
-  ├─ Consolidated Functions (72 total)
+  ├─ Synthetic Functions (72 total)
   │   ├─ BBOB Functions (24)
   │   │   ├─ F01_SphereRaw, F02_EllipsoidSeparableRaw, ...
   │   │   └─ Shared pattern: dimension-scalable, unimodal to multimodal
@@ -151,7 +151,7 @@ User Code:
         ├─ Calls registry.get_function("sphere")
         │
         └─ Registry searches _SUITES dictionary
-           └─ Returns ConsolidatedSuite.get_function("sphere")
+           └─ Returns SyntheticSuite.get_function("sphere")
               └─ Returns F01_Sphere() instance
 
 Function Evaluation:
@@ -185,7 +185,7 @@ bomegabench/
 ├─ __init__.py (92 lines)
 │   ├─ Imports core classes: BenchmarkFunction, BenchmarkSuite
 │   ├─ Imports registry functions: get_function, list_functions, etc.
-│   ├─ Imports suite objects: ConsolidatedSuite, etc.
+│   ├─ Imports suite objects: SyntheticSuite, etc.
 │   ├─ Conditional imports for optional suites (try/except)
 │   ├─ Imports runner & visualization utilities
 │   ├─ Defines __version__, __author__, __all__
@@ -217,12 +217,12 @@ bomegabench/
    │   ├─ get_multimodal_functions()
    │   └─ get_unimodal_functions()
    │
-   ├─ consolidated_functions.py (1,965 lines) [LARGE - candidate for refactoring]
+   ├─ synthetic_functions.py (1,965 lines) [LARGE - candidate for refactoring]
    │   ├─ 24 BBOB functions (F01-F24)
    │   ├─ 10 Classical core functions
    │   ├─ 32 Classical additional functions
    │   ├─ 6 BoTorch additional functions
-   │   └─ create_consolidated_suite() factory function
+   │   └─ create_synthetic_suite() factory function
    │
    ├─ lasso_bench.py (261 lines)
    │   ├─ LassoBenchSyntheticFunction wrapper
@@ -260,11 +260,11 @@ bomegabench/
 5. DEPENDENCY INJECTION FLOW
 ================================================================================
 
-Consolidated Functions (Native):
-  create_consolidated_suite()
+Synthetic Functions (Native):
+  create_synthetic_suite()
     └─ Instantiate all 72 function classes
-       └─ Each class definition in consolidated_functions.py
-          └─ Return BenchmarkSuite("consolidated", {functions})
+       └─ Each class definition in synthetic_functions.py
+          └─ Return BenchmarkSuite("synthetic", {functions})
 
 Optional Suite (LassoBench):
   try:
@@ -356,7 +356,7 @@ Recommended Structure:
   ├─ conftest.py (pytest fixtures)
   ├─ test_core.py (BenchmarkFunction, BenchmarkSuite)
   ├─ test_registry.py (Discovery system)
-  ├─ test_consolidated_functions.py (72 native functions)
+  ├─ test_synthetic_functions.py (72 native functions)
   ├─ test_lasso_bench_integration.py (with mocking)
   ├─ test_hpo_benchmarks_integration.py (with mocking)
   ├─ test_hpobench_integration.py (with mocking)

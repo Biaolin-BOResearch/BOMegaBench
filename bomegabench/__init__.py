@@ -2,7 +2,7 @@
 BO-MegaBench: A comprehensive Bayesian Optimization benchmark library.
 
 This library provides 72+ synthetic benchmark functions plus real-world optimization benchmarks:
-- Consolidated Suite (72 functions): Complete collection including BBOB (24), BoTorch Additional (6), 
+- Synthetic Suite (72 functions): Complete collection including BBOB (24), BoTorch Additional (6),
   Classical Additional (32), and Classical Core (10) functions
 - LassoBench Synthetic Suite (8 functions - high-dimensional sparse regression)  
 - LassoBench Real-world Suite (5 functions - real datasets)
@@ -19,7 +19,7 @@ Optional dependencies: LassoBench, bayesmark, hpobench, ConfigSpace.
 
 from .core import BenchmarkFunction, BenchmarkSuite
 from .functions import (
-    ConsolidatedSuite,
+    SyntheticSuite,
     get_function,
     list_functions,
     list_suites,
@@ -70,8 +70,8 @@ __author__ = "BOResearch"
 
 __all__ = [
     "BenchmarkFunction",
-    "BenchmarkSuite", 
-    "ConsolidatedSuite",
+    "BenchmarkSuite",
+    "SyntheticSuite",
     "get_function",
     "list_functions",
     "list_suites",

@@ -5,8 +5,8 @@ Function registry for unified access to all benchmark functions.
 from typing import Dict, List, Optional, Any
 from ..core import BenchmarkFunction, BenchmarkSuite
 
-# Import consolidated functions suite
-from .consolidated_functions import create_consolidated_suite
+# Import synthetic functions suite
+from .synthetic_functions import create_synthetic_suite
 
 # Import LassoBench suites (with optional dependency)
 try:
@@ -70,12 +70,12 @@ GuacamolMPOSuite = None
 GuacamolPropertiesSuite = None
 GuacamolScaffoldSuite = None
 
-# Create consolidated suite
-ConsolidatedSuite = create_consolidated_suite()
+# Create synthetic suite
+SyntheticSuite = create_synthetic_suite()
 
 # Global registry of all suites
 _SUITES: Dict[str, BenchmarkSuite] = {
-    "consolidated": ConsolidatedSuite,
+    "synthetic": SyntheticSuite,
 }
 
 # Add LassoBench suites if available

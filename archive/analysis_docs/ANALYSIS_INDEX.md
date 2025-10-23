@@ -32,7 +32,7 @@ This directory contains a comprehensive analysis of the BOMegaBench codebase. St
 ### For Code Review & Refactoring
 - See "Key Issues" section in COMPREHENSIVE_CODEBASE_ANALYSIS.md
 - Main concerns:
-  - Monolithic consolidated_functions.py (1,965 LOC)
+  - Monolithic synthetic_functions.py (1,965 LOC)
   - Duplicated import patterns (3+ files)
   - Limited type hints
   - Incomplete test coverage
@@ -67,7 +67,7 @@ This directory contains a comprehensive analysis of the BOMegaBench codebase. St
 | Dependency Management | Good | Graceful handling of optional features |
 
 ### Current Integration Status
-- **Consolidated Suite**: ✓ COMPLETE (72 functions)
+- **Synthetic Suite**: ✓ COMPLETE (72 functions)
 - **LassoBench Suite**: ✓ COMPLETE (13 functions)
 - **HPO Benchmarks**: ✓ COMPLETE (100+ functions)
 - **HPOBench Suites**: ✓ COMPLETE (50+ functions)
@@ -82,7 +82,7 @@ This directory contains a comprehensive analysis of the BOMegaBench codebase. St
 - `bomegabench/visualization.py` - Plotting utilities
 
 ### Function Implementations
-- `bomegabench/functions/consolidated_functions.py` (1,965 lines) - 72 native functions
+- `bomegabench/functions/synthetic_functions.py` (1,965 lines) - 72 native functions
 - `bomegabench/functions/hpobench_benchmarks.py` (585 lines) - HPOBench wrapper
 - `bomegabench/functions/database_tuning.py` (801 lines) - Database tuning
 - `bomegabench/functions/lasso_bench.py` (261 lines) - LassoBench wrapper
@@ -96,7 +96,7 @@ This directory contains a comprehensive analysis of the BOMegaBench codebase. St
 ## Top Recommendations
 
 ### Priority 1: Code Organization (Medium Effort)
-1. Split `consolidated_functions.py` into submodules (bbob/, classical/, botorch/)
+1. Split `synthetic_functions.py` into submodules (bbob/, classical/, botorch/)
 2. Consolidate dependency checking into `util/dependencies.py`
 3. Add missing type hints (run mypy)
 
@@ -179,7 +179,7 @@ import bomegabench as bmb
 suites = bmb.list_suites()
 
 # List functions in a suite
-functions = bmb.list_functions(suite="consolidated")
+functions = bmb.list_functions(suite="synthetic")
 
 # Get functions by property
 multimodal = bmb.get_multimodal_functions()
@@ -245,7 +245,7 @@ df = runner.get_results_dataframe()
 │   ├── visualization.py            # Plotting
 │   └── functions/                  # Function implementations
 │       ├── registry.py             # Central discovery
-│       ├── consolidated_functions.py
+│       ├── synthetic_functions.py
 │       ├── lasso_bench.py
 │       ├── hpo_benchmarks.py
 │       ├── hpobench_benchmarks.py
@@ -277,7 +277,7 @@ df = runner.get_results_dataframe()
 4. Review examples/ for usage patterns
 
 ### For Refactoring
-1. Prioritize splitting consolidated_functions.py
+1. Prioritize splitting synthetic_functions.py
 2. Consolidate dependency checking
 3. Add comprehensive test suite
 4. Implement lazy loading for optional suites

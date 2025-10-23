@@ -18,7 +18,7 @@ BOMegaBench/
 │   └── functions/                  # Benchmark functions organization
 │       ├── __init__.py             # Registry imports
 │       ├── registry.py             # Function discovery and registration
-│       ├── consolidated_functions.py    # 72 synthetic functions
+│       ├── synthetic_functions.py    # 72 synthetic functions
 │       ├── lasso_bench.py          # LassoBench integration (13 functions)
 │       ├── hpo_benchmarks.py       # HPO benchmarks via Bayesmark
 │       └── hpobench_benchmarks.py  # HPOBench ML/NAS/RL/OD/Surrogates
@@ -72,7 +72,7 @@ The registry implements a **discovery and registration pattern**:
 ```python
 # Global registry mapping suite names to BenchmarkSuite instances
 _SUITES: Dict[str, BenchmarkSuite] = {
-    "consolidated": ConsolidatedSuite,
+    "synthetic": SyntheticSuite,
     "lasso_synthetic": LassoBenchSyntheticSuite,  # Optional dependency
     "lasso_real": LassoBenchRealSuite,            # Optional dependency
     "hpo": HPOBenchmarksSuite,                    # Optional dependency
@@ -107,8 +107,8 @@ _SUITES: Dict[str, BenchmarkSuite] = {
 
 ## 3. Existing Benchmark Suites
 
-### 3.1 Consolidated Suite (72 functions)
-**Location**: `/mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/consolidated_functions.py`
+### 3.1 Synthetic Suite (72 functions)
+**Location**: `/mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/synthetic_functions.py`
 
 **Organization**:
 - **BBOB Functions** (24): Standard Black-Box Optimization Benchmark set
@@ -120,7 +120,7 @@ _SUITES: Dict[str, BenchmarkSuite] = {
 - **Classical Additional** (32): Classical optimization benchmarks
 - **Classical Core** (10): Core classical functions
 
-**Integration Pattern for Consolidated Suite**:
+**Integration Pattern for Synthetic Suite**:
 ```python
 # Create function classes inheriting from BenchmarkFunction
 class FunctionName(BenchmarkFunction):
@@ -142,12 +142,12 @@ class FunctionName(BenchmarkFunction):
         return torch.sum(X**2, dim=-1)  # Returns shape (...,)
 
 # Create suite at module load time
-def create_consolidated_suite() -> BenchmarkSuite:
+def create_synthetic_suite() -> BenchmarkSuite:
     functions = {
         "function_key": FunctionName(),
         # ... more functions
     }
-    return BenchmarkSuite("consolidated", functions)
+    return BenchmarkSuite("synthetic", functions)
 ```
 
 ### 3.2 LassoBench Integration (13 functions)
@@ -351,7 +351,7 @@ df = runner.get_results_dataframe()
 suites = bmb.list_suites()
 
 # List functions in a suite
-functions = bmb.list_functions(suite="consolidated")
+functions = bmb.list_functions(suite="synthetic")
 
 # Get all functions with a property
 multimodal = bmb.get_multimodal_functions()
@@ -362,7 +362,7 @@ separable = bmb.get_functions_by_property("properties", "separable")
 
 ## 5. Integration Patterns Summary
 
-### Pattern 1: Simple Synthetic Functions (Consolidated Suite)
+### Pattern 1: Simple Synthetic Functions (Synthetic Suite)
 
 **When to use**: For pure mathematical functions
 **Steps**:
@@ -373,9 +373,9 @@ separable = bmb.get_functions_by_property("properties", "separable")
 5. Register in `registry.py`
 
 **File structure**:
-- All classes in `consolidated_functions.py`
+- All classes in `synthetic_functions.py`
 - Instantiate all at module load
-- Return BenchmarkSuite from `create_consolidated_suite()`
+- Return BenchmarkSuite from `create_synthetic_suite()`
 
 ### Pattern 2: External Library Wrapper (LassoBench, HPOBench)
 
@@ -468,7 +468,7 @@ class LassoBenchSyntheticFunction(BenchmarkFunction):
 
 ```
 BenchmarkFunction (abstract base)
-├── Consolidated Suite Functions (72)
+├── Synthetic Suite Functions (72)
 │   ├── BBOB (24)
 │   ├── BoTorch Additional (6)
 │   ├── Classical Additional (32)

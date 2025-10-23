@@ -11,7 +11,7 @@ FOCUS: Database Knob Tuning Integration
 ================================================================================
 
 BOMegaBench is a well-architected benchmark framework containing:
-- 72 Consolidated Synthetic Functions (BBOB, Classical, BoTorch)
+- 72 Synthetic Synthetic Functions (BBOB, Classical, BoTorch)
 - 13 LassoBench Functions (High-dimensional sparse optimization)
 - 100+ HPO Benchmarks (Machine Learning hyperparameter optimization)
 - 30+ HPOBench Functions (ML, NAS, RL, OD, Surrogates)
@@ -47,7 +47,7 @@ LAYER 3: Function Wrappers
    - Provide metadata via _get_metadata()
 
 LAYER 4: External Systems
-   - Consolidated suite: Pure Python implementations
+   - Synthetic suite: Pure Python implementations
    - LassoBench: Wraps LassoBench library
    - HPOBench: Wraps HPOBench and ConfigSpace
    - Bayesmark: Wraps scikit-learn via Bayesmark
@@ -80,7 +80,7 @@ Core Framework Files:
     │   ├── _SUITES: Dict mapping suite names to BenchmarkSuite objects
     │   └── API functions: get_function, list_functions, etc.
     │
-    ├── consolidated_functions.py
+    ├── synthetic_functions.py
     │   └── 72 synthetic functions (example of Pattern 1)
     │
     ├── lasso_bench.py
@@ -107,7 +107,7 @@ Supporting Files:
 ================================================================================
 
 PATTERN 1: Simple Synthetic Functions
-Location: consolidated_functions.py
+Location: synthetic_functions.py
 Pattern:
   1. Create class inheriting from BenchmarkFunction
   2. Implement _evaluate_true(X) with vectorized computation
@@ -319,7 +319,7 @@ Core Implementation Files:
 - /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/benchmark.py
 - /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/registry.py
 - /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/__init__.py
-- /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/consolidated_functions.py
+- /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/synthetic_functions.py
 
 Integration Examples:
 - /mnt/h/BOResearch-25fall/BOMegaBench/bomegabench/functions/lasso_bench.py

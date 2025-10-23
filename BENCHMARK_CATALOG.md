@@ -12,7 +12,7 @@
 
 ## 目录
 
-1. [Consolidated Functions (72个基础函数)](#1-consolidated-functions)
+1. [Synthetic Functions (72个基础函数)](#1-synthetic-functions)
    - 1.1 [BBOB Functions (24个)](#11-bbob-functions)
    - 1.2 [BoTorch Additional (6个)](#12-botorch-additional-functions)
    - 1.3 [Classical Additional (32个)](#13-classical-additional-functions)
@@ -30,9 +30,9 @@
 
 ---
 
-## 1. Consolidated Functions
+## 1. Synthetic Functions
 
-**文件位置：** `bomegabench/functions/consolidated/`
+**文件位置：** `bomegabench/functions/synthetic/`
 
 **总数：** 72 个独特的基准函数
 
@@ -1045,7 +1045,7 @@
 
 | 领域 | 任务数量 | Benchmark |
 |------|---------|-----------|
-| **经典优化** | ~100 | Consolidated Functions (BBOB, BoTorch, Classical) |
+| **经典优化** | ~100 | Synthetic Functions (BBOB, BoTorch, Classical) |
 | **超参数优化** | ~200 | HPOBench, HPO Benchmarks, LassoBench |
 | **机器人控制** | ~100 | MuJoCo, Robosuite, HumanoidBench |
 | **分子/材料设计** | ~80 | Design-Bench, Olympus Datasets |

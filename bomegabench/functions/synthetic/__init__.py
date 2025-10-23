@@ -1,5 +1,5 @@
 """
-Consolidated benchmark functions - modularized structure.
+Synthetic benchmark functions - modularized structure.
 
 This package contains 72 unique benchmark functions organized into:
 - BBOB Functions (24)
@@ -18,8 +18,8 @@ from .classical_additional import CLASSICAL_ADDITIONAL_FUNCTIONS
 from .classical_core import CLASSICAL_CORE_FUNCTIONS
 
 
-def create_consolidated_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> BenchmarkSuite:
-    """Create consolidated suite with all 72 unique benchmark functions."""
+def create_synthetic_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> BenchmarkSuite:
+    """Create synthetic suite with all 72 unique benchmark functions."""
     functions = {}
 
     # BBOB Functions (24)
@@ -122,11 +122,11 @@ def create_consolidated_suite(dimensions: List[int] = [2, 4, 8, 30, 53]) -> Benc
         for dim in dimensions:
             functions[f"{cls.__name__.replace('Function', '').lower()}_{dim}d"] = cls(dim=dim)
 
-    return BenchmarkSuite("Consolidated Functions", functions)
+    return BenchmarkSuite("Synthetic Functions", functions)
 
 
 # Function summary and statistics
-CONSOLIDATED_FUNCTIONS_SUMMARY = {
+SYNTHETIC_FUNCTIONS_SUMMARY = {
     "total_unique_functions": 72,
     "bbob_functions": 24,
     "botorch_additional_functions": 6,
@@ -143,8 +143,8 @@ CONSOLIDATED_FUNCTIONS_SUMMARY = {
 
 
 __all__ = [
-    "create_consolidated_suite",
-    "CONSOLIDATED_FUNCTIONS_SUMMARY",
+    "create_synthetic_suite",
+    "SYNTHETIC_FUNCTIONS_SUMMARY",
     "BBOB_FUNCTIONS",
     "BOTORCH_ADDITIONAL_FUNCTIONS",
     "CLASSICAL_ADDITIONAL_FUNCTIONS",
