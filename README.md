@@ -138,65 +138,113 @@ plot_comparison(results)
 
 ```
 BOMegaBench/
-├── bomegabench/                    # Main package
-│   ├── core.py                     # Base classes (BenchmarkFunction, BenchmarkSuite)
-│   ├── benchmark.py                # Benchmark runner and result classes
-│   ├── visualization.py            # Plotting utilities
-│   ├── utils/                      # Utility modules
-│   │   ├── dependencies.py         # ✨ Unified dependency management
+├── bomegabench/                       # Main package
+│   ├── __init__.py                    # Package initialization
+│   ├── core.py                        # Base classes (BenchmarkFunction, BenchmarkSuite)
+│   ├── benchmark.py                   # Benchmark runner and result classes
+│   ├── visualization.py               # Plotting utilities
+│   ├── utils/                         # Utility modules
+│   │   ├── dependencies.py            # Unified dependency management
+│   │   ├── discrete_encoding.py       # Discrete parameter encoding utilities
 │   │   └── __init__.py
-│   └── functions/                  # Benchmark function implementations
-│       ├── synthetic/           # ✨ Modular synthetic functions (72 functions)
+│   └── functions/                     # Benchmark function implementations (500+ tasks)
+│       ├── __init__.py                # Function suite exports
+│       ├── registry.py                # Global function registry
+│       │
+│       ├── synthetic/                 # 1. Synthetic Functions (72)
 │       │   ├── __init__.py
-│       │   ├── bbob_functions.py          (599 lines - 24 BBOB functions)
-│       │   ├── botorch_additional.py      (217 lines - 6 BoTorch functions)
-│       │   ├── classical_additional.py    (838 lines - 32 classical functions)
-│       │   └── classical_core.py          (285 lines - 10 core functions)
-│       ├── database/               # ✨ NEW: Modular database tuning (1,069 lines)
-│       │   ├── __init__.py                (90 lines)
-│       │   ├── core.py                    (245 lines - DatabaseTuningFunction)
-│       │   ├── knob_configs.py            (274 lines - PostgreSQL/MySQL configs)
-│       │   ├── space_converter.py         (247 lines - Continuous-discrete conversion)
-│       │   ├── evaluator.py               (143 lines - BenchBase integration)
-│       │   └── suite.py                   (70 lines - Suite creation)
-│       ├── lasso_bench.py          # LassoBench integration (260 lines)
-│       ├── hpo_benchmarks.py       # Bayesmark HPO benchmarks (313 lines)
-│       ├── hpobench_benchmarks.py  # HPOBench benchmarks (585 lines)
-│       ├── benchbase_wrapper.py    # BenchBase wrapper (655 lines)
-│       ├── synthetic_functions.py  # Backward compatibility layer (39 lines)
-│       ├── database_tuning.py      # ⚠️ DEPRECATED: Use database/ instead (63 lines)
-│       └── registry.py             # Function registry (261 lines)
-├── tests/                          # Comprehensive test suite
-│   ├── test_synthetic.py       # Synthetic functions tests
-│   ├── test_dependencies.py       # Dependency management tests
-│   └── test_database/             # ✨ NEW: Database tuning tests (40 tests)
-│       ├── __init__.py
-│       ├── test_knob_configs.py   # Knob configuration tests (18 tests)
-│       ├── test_space_converter.py # Space conversion tests (15 tests)
-│       └── test_core.py            # Core functionality tests (7 tests)
-├── examples/                       # Example scripts
+│       │   ├── bbob_functions.py              # 24 BBOB functions
+│       │   ├── botorch_additional.py          # 6 BoTorch functions
+│       │   ├── classical_additional.py        # 32 classical functions
+│       │   └── classical_core.py              # 10 core functions
+│       │
+│       ├── lasso_bench.py             # 2. LassoBench (13 tasks)
+│       │
+│       ├── hpobench_benchmarks.py     # 3. HPOBench (50+ tasks)
+│       │                              #    - ML, NAS, OD, RL, Surrogates
+│       │
+│       ├── hpo_benchmarks.py          # 4. HPO Benchmarks / Bayesmark (100+)
+│       │                              #    - 8 models × 6 datasets
+│       │
+│       ├── database/                  # 5. Database Tuning (2 databases)
+│       │   ├── __init__.py
+│       │   ├── core.py                        # DatabaseTuningFunction
+│       │   ├── knob_configs.py                # PostgreSQL/MySQL configs
+│       │   ├── space_converter.py             # Continuous-discrete conversion
+│       │   ├── evaluator.py                   # BenchBase integration
+│       │   └── suite.py                       # Suite creation
+│       │
+│       ├── olympus_surfaces.py        # 6. Olympus Surfaces (20+)
+│       │                              #    - Categorical, Discrete, Mountain terrains
+│       │
+│       ├── olympus_datasets.py        # 7. Olympus Datasets (40+)
+│       │                              #    - Real chemistry/materials experiments
+│       │
+│       ├── mujoco_control.py          # 8. MuJoCo Control (10 tasks)
+│       │                              #    - 5 robots × 2 controller types
+│       │
+│       ├── robosuite_manipulation.py  # 9. Robosuite (22 tasks)
+│       │                              #    - 11 manipulation tasks × 2 controllers
+│       │
+│       ├── humanoid_bench_tasks.py    # 10. HumanoidBench (320+ tasks)
+│       │                              #    - 5 robots × 32 tasks × 2 controllers
+│       │
+│       ├── design_bench_tasks.py      # 11. Design-Bench (25+ tasks)
+│       │                              #    - Materials, Protein, DNA/RNA, NAS
+│       │
+│       ├── benchbase_wrapper.py       # BenchBase wrapper for database tuning
+│       ├── synthetic_functions.py     # Backward compatibility layer
+│       └── database_tuning.py         # ⚠️ DEPRECATED: Use database/ instead
+│
+├── tests/                             # Comprehensive test suite
+│   ├── test_synthetic.py
+│   ├── test_dependencies.py
+│   ├── test_mujoco_integration.py
+│   ├── test_robosuite_integration.py
+│   ├── test_humanoid_bench_integration.py
+│   └── test_database/
+│       ├── test_knob_configs.py
+│       ├── test_space_converter.py
+│       └── test_core.py
+│
+├── examples/                          # Example scripts
 │   ├── basic_usage.py
+│   ├── discrete_encoding_demo.py
 │   ├── lasso_bench_example.py
-│   └── hpo_benchmark_example.py
-├── .github/                        # ✨ NEW: CI/CD workflows
+│   ├── lasso_bench_simple.py
+│   ├── hpo_benchmark_example.py
+│   ├── example_mujoco_control.py
+│   ├── robosuite_example.py
+│   ├── humanoid_bench_example.py
+│   ├── test_olympus_integration.py
+│   └── database_tuning/
+│       ├── README.md
+│       ├── QUICKSTART.md
+│       └── example_benchbase_integration.py
+│
+├── docs/                              # Documentation
+│   ├── BENCHMARK_CATALOG.md           # Complete benchmark catalog (500+ tasks)
+│   ├── DISCRETE_ENCODING_GUIDE.md     # Discrete encoding documentation
+│   ├── MUJOCO_INTEGRATION.md          # MuJoCo setup guide
+│   ├── ROBOSUITE_INTEGRATION.md       # Robosuite setup guide
+│   ├── HUMANOID_BENCH_INTEGRATION.md  # HumanoidBench guide
+│   ├── OLYMPUS_INTEGRATION.md         # Olympus setup guide
+│   └── DESIGN_BENCH_SUPPLEMENT.md     # Design-Bench guide
+│
+├── .github/                           # CI/CD workflows
 │   ├── workflows/
-│   │   ├── ci.yml                 # Main CI pipeline
-│   │   ├── docs.yml               # Documentation generation
-│   │   ├── quality.yml            # Code quality checks
-│   │   └── release.yml            # Release automation
-│   └── CONTRIBUTING.md            # ✨ NEW: Contribution guidelines
-├── docs/                           # Documentation
-├── .pre-commit-config.yaml         # Pre-commit hooks configuration
-├── pyproject.toml                  # Modern Python project configuration
-├── setup.py                        # Setuptools configuration
-├── README.md                       # This file
-├── REFACTORING_PROGRESS.md         # ✨ NEW: Refactoring progress tracker
-└── REFACTORING_SUMMARY.md          # Previous refactoring summary
+│   │   ├── ci.yml
+│   │   ├── docs.yml
+│   │   ├── quality.yml
+│   │   └── release.yml
+│   └── CONTRIBUTING.md
+│
+├── archive/                           # Archived development files
+├── .pre-commit-config.yaml
+├── pyproject.toml
+├── setup.py
+└── README.md                          # This file
 ```
-
-**Legend:**
-- ✨ = Recently added/refactored
-- ⚠️ = Deprecated (will be removed in future versions)
 
 ## 🔧 Development
 
