@@ -1,0 +1,371 @@
+================================================================================
+BOMEGABENCH - ARCHITECTURE & COMPONENT DIAGRAM
+================================================================================
+
+1. OVERALL SYSTEM ARCHITECTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          USER APPLICATION LAYER                             │
+│  (User code: bmb.get_function(), bmb.list_functions(), etc.)               │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────────────────┐
+│                     BOMEGABENCH PUBLIC API LAYER                            │
+│  ├─ bomegabench.get_function(name, suite=None)                             │
+│  ├─ bomegabench.list_functions(suite=None)                                 │
+│  ├─ bomegabench.list_suites()                                              │
+│  ├─ bomegabench.get_functions_by_property(prop, value, suite=None)        │
+│  ├─ bomegabench.get_multimodal_functions()                                 │
+│  ├─ bomegabench.get_unimodal_functions()                                   │
+│  └─ bomegabench.BenchmarkRunner                                            │
+│                      (via bomegabench/__init__.py)                         │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────────────────┐
+│                       REGISTRY LAYER                                         │
+│                  (bomegabench/functions/registry.py)                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Global _SUITES Dictionary:                                          │   │
+│  │                                                                     │   │
+│  │  _SUITES = {                                                        │   │
+│  │    "consolidated": ConsolidatedSuite (72 functions) [ALWAYS AVAIL] │   │
+│  │    "lasso_synthetic": LassoBenchSyntheticSuite (8) [Optional]      │   │
+│  │    "lasso_real": LassoBenchRealSuite (5) [Optional]                │   │
+│  │    "hpo": HPOBenchmarksSuite (100+) [Optional]                     │   │
+│  │    "hpobench_ml": HPOBenchMLSuite (30+) [Optional]                 │   │
+│  │    "hpobench_od": HPOBenchODSuite (8+) [Optional]                  │   │
+│  │    "hpobench_nas": HPOBenchNASSuite (8+) [Optional]                │   │
+│  │    "hpobench_rl": HPOBenchRLSuite (2+) [Optional]                  │   │
+│  │    "hpobench_surrogates": Surrogates (3+) [Optional]               │   │
+│  │    "database_tuning": DatabaseTuningSuite [In Progress]            │   │
+│  │  }                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────────────────┐
+│                        SUITE LAYER                                          │
+│              (BenchmarkSuite containers - bomegabench/core.py)             │
+│                                                                             │
+│  Each BenchmarkSuite contains:                                             │
+│  ├─ name: str (suite identifier)                                           │
+│  ├─ functions: Dict[str, BenchmarkFunction]                                │
+│  └─ Methods:                                                               │
+│     ├─ get_function(name) → BenchmarkFunction                             │
+│     ├─ list_functions() → List[str]                                        │
+│     ├─ get_functions_by_property(prop, value) → List[str]                │
+│     └─ __iter__, __len__, __getitem__                                      │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────────────────┐
+│                    IMPLEMENTATION LAYER                                     │
+│              (Specific function implementations)                            │
+│                                                                             │
+│  All inherit from BenchmarkFunction (abstract base class)                   │
+│  Implementations in:                                                       │
+│  ├─ consolidated_functions.py (72 functions)                              │
+│  ├─ lasso_bench.py (LassoBench wrapper)                                   │
+│  ├─ hpo_benchmarks.py (HPO wrapper)                                        │
+│  ├─ hpobench_benchmarks.py (HPOBench wrapper)                              │
+│  └─ database_tuning.py (Database tuning)                                   │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────────────────┐
+│                   EXTERNAL SYSTEMS LAYER                                    │
+│                                                                             │
+│  ├─ LassoBench library (optional)                                          │
+│  ├─ HPOBench library (optional)                                            │
+│  ├─ Bayesmark/scikit-learn (optional)                                      │
+│  ├─ BenchBase framework (Java-based, optional)                             │
+│  └─ PyTorch/BoTorch (core)                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+2. CORE CLASS HIERARCHY
+================================================================================
+
+BenchmarkFunction (Abstract Base Class)
+│   Location: bomegabench/core.py
+│   ~158 lines
+│
+├── Properties:
+│   ├─ dim: int - Problem dimension
+│   ├─ bounds: Tensor - Shape (2, dim) with lower/upper bounds
+│   ├─ negate: bool - For maximization
+│   ├─ noise_std: Optional[float] - Gaussian noise
+│   └─ metadata: Dict - Function properties via _get_metadata()
+│
+├── Abstract Methods (subclasses must implement):
+│   ├─ _evaluate_true(X: Tensor) → Tensor
+│   └─ _get_metadata() → Dict[str, Any]
+│
+└── Concrete Methods (all subclasses inherit):
+    ├─ forward(X, noise=True) → Tensor
+    ├─ __call__(X: Union[Tensor, np.ndarray]) → Union[Tensor, np.ndarray]
+    ├─ get_bounds() → Tuple[np.ndarray, np.ndarray]
+    ├─ sample_random(n_samples) → Tensor
+    └─ Properties: metadata (via property)
+
+
+Specific Implementations:
+
+BenchmarkFunction
+  │
+  ├─ Consolidated Functions (72 total)
+  │   ├─ BBOB Functions (24)
+  │   │   ├─ F01_SphereRaw, F02_EllipsoidSeparableRaw, ...
+  │   │   └─ Shared pattern: dimension-scalable, unimodal to multimodal
+  │   ├─ BoTorch Additional (6)
+  │   │   └─ Hartman6, Branin, Ackley, Rastrigin, Levy
+  │   ├─ Classical Core (10)
+  │   │   └─ Sphere, Rosenbrock, Styblinski-Tang, ...
+  │   └─ Classical Additional (32)
+  │       └─ Schwefel, Penalized, ...
+  │
+  ├─ LassoBenchSyntheticFunction
+  │   └─ Wraps LassoBench.SyntheticBenchmark (8 instances)
+  │
+  ├─ LassoBenchRealFunction
+  │   └─ Wraps LassoBench.RealBenchmark (5 instances)
+  │
+  ├─ HPOBenchmarksSyntheticFunction
+  │   └─ Wraps Bayesmark SklearnModel (100+ instances)
+  │
+  ├─ HPOBenchFunction
+  │   ├─ ML Models (30+): SVM, XGBoost, RandomForest, NN
+  │   ├─ OD Models (8+): Outlier detection
+  │   ├─ NAS Models (8+): NASBench-101, NASBench-1shot1
+  │   ├─ RL Models (2+): Cartpole
+  │   └─ Surrogates (3+): Paramnet, SVM
+  │
+  └─ DatabaseTuningFunction
+      └─ Wraps BenchBase benchmarking framework
+
+
+3. DATA FLOW - FUNCTION EVALUATION
+================================================================================
+
+User Code:
+  func = bmb.get_function("sphere")
+        │
+        ├─ Calls registry.get_function("sphere")
+        │
+        └─ Registry searches _SUITES dictionary
+           └─ Returns ConsolidatedSuite.get_function("sphere")
+              └─ Returns F01_Sphere() instance
+
+Function Evaluation:
+  X_torch = torch.tensor([[0.5, 0.3]])
+  y = func(X_torch)
+        │
+        ├─ Calls BenchmarkFunction.__call__(X_torch)
+        │
+        ├─ Converts if needed (torch → torch, np → torch)
+        │
+        ├─ Calls forward(X)
+        │  ├─ Calls _evaluate_true(X) [must be implemented by subclass]
+        │  ├─ Applies negation if negate=True
+        │  └─ Applies noise if noise_std is set
+        │
+        └─ Returns Y (same type as input)
+
+Batch Evaluation:
+  X_batch = torch.rand(10, 2)
+  Y_batch = func(X_batch)  # Vectorized computation
+        │
+        └─ All operations preserve batch dimension
+           └─ Returns shape (10,) tensor
+
+
+4. MODULE ORGANIZATION
+================================================================================
+
+bomegabench/
+│
+├─ __init__.py (92 lines)
+│   ├─ Imports core classes: BenchmarkFunction, BenchmarkSuite
+│   ├─ Imports registry functions: get_function, list_functions, etc.
+│   ├─ Imports suite objects: ConsolidatedSuite, etc.
+│   ├─ Conditional imports for optional suites (try/except)
+│   ├─ Imports runner & visualization utilities
+│   ├─ Defines __version__, __author__, __all__
+│   └─ Exports all public API
+│
+├─ core.py (158 lines)
+│   ├─ BenchmarkFunction (abstract base class)
+│   └─ BenchmarkSuite (container class)
+│
+├─ benchmark.py (150+ lines)
+│   ├─ BenchmarkResult (dataclass for results)
+│   └─ BenchmarkRunner (experiment orchestration)
+│
+├─ visualization.py (200+ lines)
+│   ├─ plot_function(): 2D landscape visualization
+│   ├─ plot_convergence(): Optimization progress
+│   └─ plot_comparison(): Multi-algorithm comparison
+│
+└─ functions/ (4000+ lines total)
+   ├─ __init__.py (106 lines)
+   │   └─ Imports & re-exports all suites
+   │
+   ├─ registry.py (261 lines) ← CENTRAL HUB
+   │   ├─ Global _SUITES dictionary
+   │   ├─ get_function(name, suite=None)
+   │   ├─ list_functions(suite=None)
+   │   ├─ list_suites()
+   │   ├─ get_functions_by_property()
+   │   ├─ get_multimodal_functions()
+   │   └─ get_unimodal_functions()
+   │
+   ├─ consolidated_functions.py (1,965 lines) [LARGE - candidate for refactoring]
+   │   ├─ 24 BBOB functions (F01-F24)
+   │   ├─ 10 Classical core functions
+   │   ├─ 32 Classical additional functions
+   │   ├─ 6 BoTorch additional functions
+   │   └─ create_consolidated_suite() factory function
+   │
+   ├─ lasso_bench.py (261 lines)
+   │   ├─ LassoBenchSyntheticFunction wrapper
+   │   ├─ LassoBenchRealFunction wrapper
+   │   ├─ create_lasso_bench_synthetic_suite() factory
+   │   └─ create_lasso_bench_real_suite() factory
+   │
+   ├─ hpo_benchmarks.py (313 lines)
+   │   ├─ HPOBenchmarksSyntheticFunction wrapper
+   │   └─ create_hpo_benchmarks_suite() factory
+   │
+   ├─ hpobench_benchmarks.py (585 lines)
+   │   ├─ HPOBenchFunction base wrapper
+   │   ├─ ML benchmark suite creation
+   │   ├─ OD benchmark suite creation
+   │   ├─ NAS benchmark suite creation
+   │   ├─ RL benchmark suite creation
+   │   └─ Surrogate benchmark suite creation
+   │
+   ├─ database_tuning.py (801 lines) [LARGE - candidate for refactoring]
+   │   ├─ DatabaseTuningFunction wrapper
+   │   ├─ Knob configuration handling
+   │   ├─ _create_continuous_space() for knobs
+   │   ├─ _denormalize() for denormalization
+   │   └─ create_database_tuning_suite() factory
+   │
+   └─ benchbase_wrapper.py (655 lines)
+       ├─ BenchBaseWrapper class
+       ├─ Database connection management
+       ├─ Configuration application
+       ├─ Benchmark execution
+       └─ Result parsing
+
+
+5. DEPENDENCY INJECTION FLOW
+================================================================================
+
+Consolidated Functions (Native):
+  create_consolidated_suite()
+    └─ Instantiate all 72 function classes
+       └─ Each class definition in consolidated_functions.py
+          └─ Return BenchmarkSuite("consolidated", {functions})
+
+Optional Suite (LassoBench):
+  try:
+    import LassoBench
+    LassoBenchSyntheticSuite = create_lasso_bench_synthetic_suite()
+  except ImportError:
+    LassoBenchSyntheticSuite = None
+  
+  registry.py:
+    if LASSO_BENCH_AVAILABLE:
+      _SUITES["lasso_synthetic"] = LassoBenchSyntheticSuite
+
+Result: Graceful degradation - library works without LassoBench
+
+
+6. METADATA DISCOVERY SYSTEM
+================================================================================
+
+Each BenchmarkFunction has metadata property:
+
+func.metadata → Dict containing:
+  ├─ name: str (display name)
+  ├─ suite: str (suite name)
+  ├─ properties: List[str]
+  │   ├─ "unimodal" | "multimodal"
+  │   ├─ "separable" | "non-separable"
+  │   ├─ "ill-conditioned" | "well-conditioned"
+  │   ├─ "asymmetric" | "symmetric"
+  │   └─ Suite-specific properties
+  ├─ domain: str (e.g., "[-5,5]^d")
+  ├─ global_min: str | float
+  └─ Suite-specific fields:
+     ├─ For LassoBench: n_features, active_dims, sparsity
+     ├─ For HPO: dataset, model_type, hyperparameters
+     ├─ For Database: database_system, workload, tunable_knobs
+     └─ etc.
+
+Discovery API (via registry.py):
+  get_functions_by_property("properties", "multimodal")
+    → Returns all multimodal functions
+  
+  get_multimodal_functions()
+    → Convenience wrapper
+  
+  get_unimodal_functions()
+    → Convenience wrapper
+
+
+7. ERROR HANDLING & OPTIONAL DEPENDENCIES
+================================================================================
+
+Pattern used across all optional suites:
+
+# At module level (e.g., lasso_bench.py):
+try:
+    from LassoBench.LassoBench import SyntheticBenchmark, RealBenchmark
+    LASSO_BENCH_AVAILABLE = True
+except ImportError:
+    LASSO_BENCH_AVAILABLE = False
+    HELPFUL_MESSAGE = "Install with: pip install git+https://..."
+
+# In wrapper class:
+class LassoBenchSyntheticFunction(BenchmarkFunction):
+    def __init__(self, ...):
+        if not LASSO_BENCH_AVAILABLE:
+            raise ImportError(HELPFUL_MESSAGE)
+        ...
+
+# In registry:
+if LASSO_BENCH_AVAILABLE:
+    _SUITES["lasso_synthetic"] = LassoBenchSyntheticSuite
+
+Result: 
+  ✓ User can install core library without optional deps
+  ✓ Library gracefully degrades
+  ✓ User gets helpful error message if they try to use unavailable suite
+
+
+8. TESTING & VALIDATION ARCHITECTURE (Current & Recommended)
+================================================================================
+
+Current Test Structure:
+  ├─ HPOBench/tests/ (HPOBench submodule tests)
+  └─ Root directory: Various test_*.py files
+
+Recommended Structure:
+  tests/
+  ├─ __init__.py
+  ├─ conftest.py (pytest fixtures)
+  ├─ test_core.py (BenchmarkFunction, BenchmarkSuite)
+  ├─ test_registry.py (Discovery system)
+  ├─ test_consolidated_functions.py (72 native functions)
+  ├─ test_lasso_bench_integration.py (with mocking)
+  ├─ test_hpo_benchmarks_integration.py (with mocking)
+  ├─ test_hpobench_integration.py (with mocking)
+  ├─ test_database_tuning.py
+  ├─ test_benchmark_runner.py
+  ├─ test_visualization.py
+  └─ integration/
+     ├─ test_optional_deps.py (graceful degradation)
+     └─ test_end_to_end.py (full workflows)
+
+
+================================================================================
