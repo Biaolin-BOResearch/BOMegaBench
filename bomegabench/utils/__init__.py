@@ -15,6 +15,15 @@ from .discrete_encoding import (
     create_encoder_for_hpo
 )
 
+from .dimension_expansion import (
+    DimensionMapping,
+    DimensionExpandedFunction,
+    DimensionDiscoveryResult,
+    DimensionDiscoveryMetrics,
+    create_dimension_expansion_test,
+    run_dimension_discovery_experiment,
+)
+
 __all__ = [
     "check_dependency",
     "require_dependency",
@@ -23,4 +32,11 @@ __all__ = [
     "DiscreteParameterSpec",
     "DiscreteEncoder",
     "create_encoder_for_hpo",
+    # Dimension expansion utilities
+    "DimensionMapping",
+    "DimensionExpandedFunction",
+    "DimensionDiscoveryResult",
+    "DimensionDiscoveryMetrics",
+    "create_dimension_expansion_test",
+    "run_dimension_discovery_experiment",
 ]
