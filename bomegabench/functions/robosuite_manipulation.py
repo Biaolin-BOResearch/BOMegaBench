@@ -39,7 +39,7 @@ from torch import Tensor
 import numpy as np
 import warnings
 
-from bomegabench.core import BenchmarkFunction, BenchmarkSuite
+from ..core import BenchmarkFunction, BenchmarkSuite
 
 
 # Available manipulation environments

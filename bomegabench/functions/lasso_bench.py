@@ -140,13 +140,13 @@ class LassoBenchRealFunction(BenchmarkFunction):
         
     def _get_metadata(self) -> Dict[str, Any]:
         """Get function metadata."""
-        # Dimension info from LassoBench README
+        # Dimension info - verified from actual LassoBench loading
         dataset_info = {
             'breast_cancer': {'dim': 10, 'approx_active': 3},
             'diabetes': {'dim': 8, 'approx_active': 5},
             'leukemia': {'dim': 7129, 'approx_active': 22},
             'dna': {'dim': 180, 'approx_active': 43},
-            'rcv1': {'dim': 19959, 'approx_active': 75}
+            'rcv1': {'dim': 47236, 'approx_active': 75}  # 实际维度为47236
         }
         
         info = dataset_info.get(self.dataset_name.lower(), {'dim': self.dim, 'approx_active': 'unknown'})
@@ -222,11 +222,27 @@ def create_lasso_bench_real_suite() -> BenchmarkSuite:
     
     functions = {}
     
-    # Real-world datasets
-    datasets = ['Diabetes', 'Breast_cancer', 'Leukemia', 'DNA', 'RCV1']
+    # Real-world datasets - 使用 LassoBench 支持的正确名称
+    # 注意: LassoBench 内部使用 libsvmdata 库 (通过 fetch_libsvm)
+    # 已测试验证的正确数据集名称:
+    # - diabetes: 8D
+    # - breast_cancer 或 Breast_cancer: 10D  
+    # - leukemia: 7129D
+    # - dna: 180D
+    # - rcv1: 47236D (非常高维)
+    datasets = {
+        'diabetes': 'diabetes',           # 8D, ~5 effective dims
+        'breast_cancer': 'breast_cancer', # 10D, ~3 effective dims (下划线，不是连字符)
+        'leukemia': 'leukemia',           # 7129D, ~22 effective dims (高维)
+        'dna': 'dna',                     # 180D, ~43 effective dims
+        'rcv1': 'rcv1',                   # 47236D, ~75 effective dims (极高维)
+    }
     
-    for dataset in datasets:
-        functions[dataset.lower()] = LassoBenchRealFunction(dataset)
+    for key, dataset in datasets.items():
+        try:
+            functions[key] = LassoBenchRealFunction(dataset)
+        except Exception as e:
+            print(f"Warning: Failed to create LassoBench {key}: {e}")
     
     return BenchmarkSuite("LassoBench Real", functions)
 

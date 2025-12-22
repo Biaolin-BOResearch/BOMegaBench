@@ -127,6 +127,28 @@ if MOL_OPT_AVAILABLE:
 
 # Guacamol suites - REMOVED (string-based inputs not supported)
 
+# Add CartPole surrogate suite if available
+try:
+    from .cartpole_surrogate import create_cartpole_surrogate_suite
+    CartPoleSurrogateSuite = create_cartpole_surrogate_suite()
+    _SUITES.update({
+        "cartpole_surrogate": CartPoleSurrogateSuite,
+    })
+except ImportError:
+    CartPoleSurrogateSuite = None
+
+# Add Olympus datasets suite if available
+try:
+    from .olympus_datasets import create_olympus_datasets_suite
+    OlympusDatasetsSuite = create_olympus_datasets_suite()
+    _SUITES.update({
+        "olympus_datasets": OlympusDatasetsSuite,
+    })
+except Exception as e:
+    # Olympus may fail to load some datasets, but we still want the suite
+    print(f"Warning: Olympus datasets suite partially available: {e}")
+    OlympusDatasetsSuite = None
+
 
 def get_function(name: str, suite: Optional[str] = None) -> BenchmarkFunction:
     """

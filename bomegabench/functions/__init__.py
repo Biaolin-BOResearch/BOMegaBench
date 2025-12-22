@@ -91,10 +91,14 @@ try:
         create_olympus_materials_suite,
         create_olympus_photovoltaics_suite,
         OlympusDatasetWrapper,
-        OlympusBuchwaldAFunction,
         OlympusSuzukiFunction,
-        OlympusPerovskitesFunction,
-        OlympusDyeLasersFunction,
+        OlympusBenzylationFunction,
+        OlympusAlkoxFunction,
+        OlympusSnarFunction,
+        OlympusFullerenesFunction,
+        OlympusHplcFunction,
+        OlympusPhotoPce10Function,
+        OlympusPhotoWf3Function,
     )
     OLYMPUS_DATASETS_AVAILABLE = True
 except ImportError as e:
@@ -104,10 +108,14 @@ except ImportError as e:
     create_olympus_materials_suite = None
     create_olympus_photovoltaics_suite = None
     OlympusDatasetWrapper = None
-    OlympusBuchwaldAFunction = None
     OlympusSuzukiFunction = None
-    OlympusPerovskitesFunction = None
-    OlympusDyeLasersFunction = None
+    OlympusBenzylationFunction = None
+    OlympusAlkoxFunction = None
+    OlympusSnarFunction = None
+    OlympusFullerenesFunction = None
+    OlympusHplcFunction = None
+    OlympusPhotoPce10Function = None
+    OlympusPhotoWf3Function = None
     OLYMPUS_DATASETS_AVAILABLE = False
 
 # Import MuJoCo Control Tasks (with optional dependency)
@@ -212,6 +220,25 @@ except ImportError as e:
     AVAILABLE_ROBOTS = None
     HUMANOID_BENCH_AVAILABLE = False
 
+# Import CartPole Surrogate (uses stable-baselines3)
+try:
+    from .cartpole_surrogate import (
+        create_cartpole_surrogate_suite,
+        CartPoleSurrogateFunction,
+        CartPolePPOFunction,
+        CartPolePPOReducedFunction,
+        SB3_AVAILABLE,
+    )
+    CARTPOLE_SURROGATE_AVAILABLE = True
+except ImportError as e:
+    print(f"CartPole Surrogate not available: {e}")
+    create_cartpole_surrogate_suite = None
+    CartPoleSurrogateFunction = None
+    CartPolePPOFunction = None
+    CartPolePPOReducedFunction = None
+    SB3_AVAILABLE = False
+    CARTPOLE_SURROGATE_AVAILABLE = False
+
 from .registry import (
     get_function,
     list_functions,
@@ -289,10 +316,14 @@ if OLYMPUS_DATASETS_AVAILABLE:
         "create_olympus_materials_suite",
         "create_olympus_photovoltaics_suite",
         "OlympusDatasetWrapper",
-        "OlympusBuchwaldAFunction",
         "OlympusSuzukiFunction",
-        "OlympusPerovskitesFunction",
-        "OlympusDyeLasersFunction",
+        "OlympusBenzylationFunction",
+        "OlympusAlkoxFunction",
+        "OlympusSnarFunction",
+        "OlympusFullerenesFunction",
+        "OlympusHplcFunction",
+        "OlympusPhotoPce10Function",
+        "OlympusPhotoWf3Function",
     ])
 
 # Add MuJoCo Control Tasks to exports if available

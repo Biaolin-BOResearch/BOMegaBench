@@ -24,7 +24,7 @@ olympus_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__fi
 if olympus_path not in sys.path:
     sys.path.insert(0, olympus_path)
 
-from bomegabench.core import BenchmarkFunction, BenchmarkSuite
+from ..core import BenchmarkFunction, BenchmarkSuite
 
 
 class OlympusSurfaceWrapper(BenchmarkFunction):

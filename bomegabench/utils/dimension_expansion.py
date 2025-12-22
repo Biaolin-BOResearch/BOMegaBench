@@ -213,8 +213,8 @@ class DimensionExpandedFunction(BenchmarkFunction):
         
         # Denormalize if we normalized to unit cube
         if self.normalize_to_unit:
-            lb = self.original_bounds[0]
-            ub = self.original_bounds[1]
+            lb = self.original_bounds[0].to(X_original.device)
+            ub = self.original_bounds[1].to(X_original.device)
             X_original = lb + X_original * (ub - lb)
         
         return X_original

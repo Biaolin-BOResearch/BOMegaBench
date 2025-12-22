@@ -3,6 +3,8 @@ HPOBench Benchmarks integration.
 Integrates various benchmarks from HPOBench into BOMegaBench with continuous hyperparameter encoding.
 """
 
+import sys
+import os
 import torch
 from torch import Tensor
 import numpy as np
@@ -11,6 +13,57 @@ import warnings
 
 # Import from BOMegaBench core
 from ..core import BenchmarkFunction, BenchmarkSuite
+
+# NOTE: Do NOT add local HPOBench repo to path - it has dependency issues
+# Use pip-installed hpobench instead
+
+# Fix sklearn compatibility: several internal modules were renamed in sklearn >= 1.0
+# These shims allow older code (like HPOBench surrogates) to work
+def _fix_sklearn_compatibility():
+    """Add compatibility shims for renamed sklearn internal modules."""
+    try:
+        # sklearn.ensemble.forest -> sklearn.ensemble._forest
+        from sklearn.ensemble import _forest
+        if 'sklearn.ensemble.forest' not in sys.modules:
+            sys.modules['sklearn.ensemble.forest'] = _forest
+    except ImportError:
+        pass
+    
+    try:
+        # sklearn.tree.tree -> sklearn.tree._tree or sklearn.tree._classes
+        from sklearn import tree as sklearn_tree
+        if 'sklearn.tree.tree' not in sys.modules:
+            # Create a module-like object with the necessary classes
+            import types
+            tree_module = types.ModuleType('sklearn.tree.tree')
+            # Copy common classes
+            if hasattr(sklearn_tree, 'DecisionTreeClassifier'):
+                tree_module.DecisionTreeClassifier = sklearn_tree.DecisionTreeClassifier
+            if hasattr(sklearn_tree, 'DecisionTreeRegressor'):
+                tree_module.DecisionTreeRegressor = sklearn_tree.DecisionTreeRegressor
+            if hasattr(sklearn_tree, 'ExtraTreeClassifier'):
+                tree_module.ExtraTreeClassifier = sklearn_tree.ExtraTreeClassifier
+            if hasattr(sklearn_tree, 'ExtraTreeRegressor'):
+                tree_module.ExtraTreeRegressor = sklearn_tree.ExtraTreeRegressor
+            # Also try to get internal _tree module
+            try:
+                from sklearn.tree import _tree
+                tree_module._tree = _tree
+            except ImportError:
+                pass
+            sys.modules['sklearn.tree.tree'] = tree_module
+    except ImportError:
+        pass
+    
+    try:
+        # sklearn.neighbors.base -> sklearn.neighbors._base
+        from sklearn.neighbors import _base as neighbors_base
+        if 'sklearn.neighbors.base' not in sys.modules:
+            sys.modules['sklearn.neighbors.base'] = neighbors_base
+    except ImportError:
+        pass
+
+_fix_sklearn_compatibility()
 
 # Try to import HPOBench
 try:
@@ -21,18 +74,45 @@ except ImportError:
     CONFIGSPACE_AVAILABLE = False
     print("ConfigSpace not available: pip install ConfigSpace")
 
+# Patch HPOBench data_manager for sklearn >= 1.2 compatibility
+# sklearn renamed 'sparse' to 'sparse_output' in OneHotEncoder
+def _patch_hpobench_for_sklearn():
+    """Patch HPOBench data_manager.py to fix sklearn compatibility."""
+    try:
+        import hpobench.dependencies.ml.data_manager as dm
+        import inspect
+        source = inspect.getsourcefile(dm)
+        if source:
+            # Read the file
+            with open(source, 'r') as f:
+                content = f.read()
+            # Check if patching is needed
+            if 'sparse=False' in content and 'sparse_output' not in content:
+                content_new = content.replace('sparse=False', 'sparse_output=False')
+                with open(source, 'w') as f:
+                    f.write(content_new)
+                # Reload the module
+                import importlib
+                importlib.reload(dm)
+    except Exception:
+        pass  # If patching fails, continue anyway
+
+_patch_hpobench_for_sklearn()
+
 # Try to import HPOBench ML benchmarks
 try:
     from hpobench.benchmarks.ml.xgboost_benchmark import XGBoostBenchmarkBB, XGBoostBenchmarkMF
     from hpobench.benchmarks.ml.svm_benchmark import SVMBenchmarkBB, SVMBenchmarkMF
-    from hpobench.benchmarks.ml.rf_benchmark import RFBenchmark
+    from hpobench.benchmarks.ml.rf_benchmark import RandomForestBenchmarkBB  # Fixed: was RFBenchmark
     from hpobench.benchmarks.ml.lr_benchmark import LRBenchmark
     from hpobench.benchmarks.ml.nn_benchmark import NNBenchmark
     from hpobench.benchmarks.ml.histgb_benchmark import HistGBBenchmark
+    # Alias for backwards compatibility
+    RFBenchmark = RandomForestBenchmarkBB
     HPOBENCH_ML_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     HPOBENCH_ML_AVAILABLE = False
-    print("HPOBench ML benchmarks not available: pip install hpobench")
+    print(f"HPOBench ML benchmarks not available: {e}")
 
 # Try to import HPOBench OD benchmarks
 try:
@@ -42,35 +122,78 @@ try:
     HPOBENCH_OD_AVAILABLE = True
 except ImportError:
     HPOBENCH_OD_AVAILABLE = False
-    print("HPOBench OD benchmarks not available: pip install hpobench")
+    # Silently skip - OD benchmarks are optional
 
 # Try to import HPOBench NAS benchmarks
 try:
+    # NASBench-101 requires tabular_benchmarks package
     from hpobench.benchmarks.nas.nasbench_101 import NASCifar10ABenchmark, NASCifar10BBenchmark, NASCifar10CBenchmark
+    NASBENCH101_AVAILABLE = True
+except ImportError as e:
+    NASBENCH101_AVAILABLE = False
+    NASCifar10ABenchmark = NASCifar10BBenchmark = NASCifar10CBenchmark = None
+
+try:
     from hpobench.benchmarks.nas.nasbench_201 import NASBench201Benchmark
+    NASBENCH201_AVAILABLE = True
+except ImportError as e:
+    NASBENCH201_AVAILABLE = False
+    NASBench201Benchmark = None
+
+try:
     from hpobench.benchmarks.nas.tabular_benchmarks import SliceLocalizationBenchmark, ProteinStructureBenchmark, NavalPropulsionBenchmark, ParkinsonsTelemonitoringBenchmark
-    HPOBENCH_NAS_AVAILABLE = True
-except ImportError:
-    HPOBENCH_NAS_AVAILABLE = False
-    print("HPOBench NAS benchmarks not available: pip install hpobench[nas]")
+    # Test if tabular_benchmarks (from nas_benchmarks) is actually available
+    # The classes import but require nasbench package for instantiation
+    try:
+        import tabular_benchmarks
+        TABULAR_BENCHMARKS_AVAILABLE = True
+    except ImportError:
+        TABULAR_BENCHMARKS_AVAILABLE = False
+        SliceLocalizationBenchmark = ProteinStructureBenchmark = NavalPropulsionBenchmark = ParkinsonsTelemonitoringBenchmark = None
+except ImportError as e:
+    TABULAR_BENCHMARKS_AVAILABLE = False
+    SliceLocalizationBenchmark = ProteinStructureBenchmark = NavalPropulsionBenchmark = ParkinsonsTelemonitoringBenchmark = None
+
+HPOBENCH_NAS_AVAILABLE = NASBENCH101_AVAILABLE or NASBENCH201_AVAILABLE or TABULAR_BENCHMARKS_AVAILABLE
+# Silently skip - NAS benchmarks are optional and require complex setup
 
 # Try to import HPOBench RL benchmarks
+# Note: cartpole requires tensorflow
 try:
     from hpobench.benchmarks.rl.cartpole import CartpoleReduced, CartpoleFull
+    CARTPOLE_AVAILABLE = True
+except ImportError as e:
+    CARTPOLE_AVAILABLE = False
+    CartpoleReduced = CartpoleFull = None
+
+try:
     from hpobench.benchmarks.rl.learna_benchmark import Learna, MetaLearna
-    HPOBENCH_RL_AVAILABLE = True
-except ImportError:
-    HPOBENCH_RL_AVAILABLE = False
-    print("HPOBench RL benchmarks not available: pip install hpobench[rl]")
+    LEARNA_AVAILABLE = True
+except ImportError as e:
+    LEARNA_AVAILABLE = False
+    Learna = MetaLearna = None
+
+HPOBENCH_RL_AVAILABLE = CARTPOLE_AVAILABLE or LEARNA_AVAILABLE
+# Silently skip - RL benchmarks are optional
 
 # Try to import HPOBench Surrogate benchmarks
+# Note: These benchmarks use pickled sklearn models from version 0.18.1
+# which are incompatible with sklearn >= 1.0 due to internal dtype changes
 try:
     from hpobench.benchmarks.surrogates.svm_benchmark import SurrogateSVMBenchmark
     from hpobench.benchmarks.surrogates.paramnet_benchmark import ParamNetAdultOnTimeBenchmark, ParamNetHiggsOnTimeBenchmark
-    HPOBENCH_SURROGATES_AVAILABLE = True
+    # Test if we can actually load the surrogate (sklearn pickle compatibility)
+    import sklearn
+    sklearn_version = tuple(map(int, sklearn.__version__.split('.')[:2]))
+    if sklearn_version >= (1, 0):
+        # Surrogate models were pickled with sklearn 0.18.1, incompatible with sklearn >= 1.0
+        HPOBENCH_SURROGATES_AVAILABLE = False
+        SurrogateSVMBenchmark = ParamNetAdultOnTimeBenchmark = ParamNetHiggsOnTimeBenchmark = None
+    else:
+        HPOBENCH_SURROGATES_AVAILABLE = True
 except ImportError:
     HPOBENCH_SURROGATES_AVAILABLE = False
-    print("HPOBench Surrogate benchmarks not available: pip install hpobench[surrogates]")
+    SurrogateSVMBenchmark = ParamNetAdultOnTimeBenchmark = ParamNetHiggsOnTimeBenchmark = None
 
 # Check overall availability
 HPOBENCH_AVAILABLE = CONFIGSPACE_AVAILABLE and (HPOBENCH_ML_AVAILABLE or HPOBENCH_OD_AVAILABLE or 
@@ -408,6 +531,9 @@ def create_hpobench_nas_suite() -> BenchmarkSuite:
     
     # Create benchmark functions
     for benchmark_class, benchmark_name in nas_benchmarks:
+        # Skip if benchmark class is None (import failed)
+        if benchmark_class is None:
+            continue
         try:
             func_name = benchmark_name.lower().replace("-", "_")
             functions[func_name] = HPOBenchFunction(
@@ -436,6 +562,9 @@ def create_hpobench_rl_suite() -> BenchmarkSuite:
     
     # Create Cartpole benchmark functions
     for benchmark_class, benchmark_name in cartpole_benchmarks:
+        # Skip if benchmark class is None (import failed)
+        if benchmark_class is None:
+            continue
         try:
             func_name = benchmark_name.lower().replace("-", "_")
             functions[func_name] = HPOBenchFunction(
@@ -460,6 +589,9 @@ def create_hpobench_rl_suite() -> BenchmarkSuite:
         default_data_path = hpobench.config.config_file.data_dir / "learna_data"
         
         for benchmark_class, benchmark_name in learna_benchmarks:
+            # Skip if benchmark class is None (import failed)
+            if benchmark_class is None:
+                continue
             try:
                 func_name = benchmark_name.lower()
                 functions[func_name] = HPOBenchFunction(
@@ -494,6 +626,9 @@ def create_hpobench_surrogates_suite() -> BenchmarkSuite:
     
     # Create benchmark functions
     for benchmark_class, benchmark_name in surrogate_benchmarks:
+        # Skip if benchmark class is None (import failed)
+        if benchmark_class is None:
+            continue
         try:
             func_name = benchmark_name.lower().replace("-", "_")
             functions[func_name] = HPOBenchFunction(

@@ -5,20 +5,72 @@ This module integrates Olympus datasets - real-world optimization problems
 based on experimental data from chemistry and materials science. These datasets
 are particularly valuable for testing Bayesian optimization algorithm performance.
 
-Available dataset categories:
-- Chemical reactions: Buchwald, Suzuki, benzylation, alkox, etc.
-- Materials: Perovskites, fullerenes, dye lasers, etc.
-- Photovoltaics: Photo PCE10, Photo WF3, P3HT, MMLI OPV
-- Nanoparticles: AgNP, LNP3
-- Electrochemistry: OER plates, electrochem
-- Liquids: Various liquid properties
-- Others: HPLC, AutoAM, thin films, etc.
+Available dataset categories (verified available in olympus):
+- Chemical reactions: suzuki, benzylation, alkox, snar
+- Materials: fullerenes, colors_bob, colors_n9
+- Photovoltaics: photo_pce10, photo_wf3
+- Other: hplc
 
 Reference: https://github.com/aspuru-guzik-group/olympus
 """
 
 import sys
 import os
+import warnings
+
+# ============================================================================
+# CRITICAL: Patch matplotlib BEFORE importing olympus
+# matplotlib >= 3.7 removed register_cmap, but olympus uses it internally
+# This patch MUST happen before any olympus import
+# ============================================================================
+def _patch_matplotlib_for_olympus():
+    """Patch matplotlib.pyplot.register_cmap for compatibility with olympus."""
+    try:
+        import matplotlib
+        import matplotlib.pyplot as plt
+        from matplotlib import colormaps
+        
+        # Check if register_cmap is missing (matplotlib >= 3.7)
+        if not hasattr(plt, 'register_cmap'):
+            def _register_cmap_compat(name=None, cmap=None):
+                """Compatibility shim for register_cmap."""
+                if cmap is not None:
+                    # Handle the case where cmap has a name attribute
+                    cmap_name = name if name is not None else getattr(cmap, 'name', 'custom_cmap')
+                    try:
+                        colormaps.register(cmap, name=cmap_name)
+                    except ValueError:
+                        # Already registered, ignore
+                        pass
+            
+            plt.register_cmap = _register_cmap_compat
+            matplotlib.pyplot.register_cmap = _register_cmap_compat
+            
+            # Also patch the cm module if needed
+            if hasattr(matplotlib, 'cm') and not hasattr(matplotlib.cm, 'register_cmap'):
+                matplotlib.cm.register_cmap = _register_cmap_compat
+    except Exception as e:
+        warnings.warn(f"Failed to patch matplotlib for olympus compatibility: {e}")
+
+# Apply the patch immediately
+_patch_matplotlib_for_olympus()
+
+# Suppress gym deprecation warning - olympus internally uses gym
+warnings.filterwarnings("ignore", message=".*Gym has been unmaintained.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="gym")
+warnings.filterwarnings("ignore", category=UserWarning, module="gym")
+
+# Try to provide gymnasium as gym for compatibility
+try:
+    import gymnasium
+    if "gym" not in sys.modules:
+        sys.modules["gym"] = gymnasium
+        sys.modules["gym.spaces"] = gymnasium.spaces
+        sys.modules["gym.envs"] = gymnasium.envs
+except ImportError:
+    pass
+
+# Now safe to import other modules
 from typing import Dict, List, Optional, Any, Union
 import torch
 from torch import Tensor
@@ -29,7 +81,7 @@ olympus_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__fi
 if olympus_path not in sys.path:
     sys.path.insert(0, olympus_path)
 
-from bomegabench.core import BenchmarkFunction, BenchmarkSuite
+from ..core import BenchmarkFunction, BenchmarkSuite
 
 
 class OlympusDatasetWrapper(BenchmarkFunction):
@@ -40,30 +92,43 @@ class OlympusDatasetWrapper(BenchmarkFunction):
     providing realistic test functions for BO algorithms.
     """
 
-    def _load_dataset_manually(self, dataset_name: str):
+    def _load_dataset_directly(self, dataset_name: str):
         """
-        Manually load dataset data without cross-validation splitting.
-        This bypasses NumPy compatibility issues in olympus Dataset class.
+        Load dataset data directly from olympus package data files.
+        This completely bypasses the Dataset class to avoid NumPy 2.0 issues.
         """
-        import importlib
         import pandas as pd
-
-        # Import Dataset class
-        dataset_module = importlib.import_module("olympus.datasets.dataset")
-
-        # Create a minimal dataset object just to get param_space and load data
-        # We'll monkey-patch to avoid the problematic split function
-        Dataset = dataset_module.Dataset
-
-        # Temporarily replace the split method
-        original_split = Dataset.create_train_validate_test_splits
-        Dataset.create_train_validate_test_splits = lambda self, *args, **kwargs: None
-
-        try:
-            self.olympus_dataset = Dataset(kind=dataset_name)
-        finally:
-            # Restore original method
-            Dataset.create_train_validate_test_splits = original_split
+        import olympus
+        
+        # Get the olympus package data directory
+        olympus_dir = os.path.dirname(olympus.__file__)
+        datasets_dir = os.path.join(olympus_dir, 'datasets', 'dataset_' + dataset_name)
+        
+        # Load the data CSV file
+        data_file = os.path.join(datasets_dir, 'data.csv')
+        if not os.path.exists(data_file):
+            raise FileNotFoundError(f"Dataset file not found: {data_file}")
+        
+        self._raw_data = pd.read_csv(data_file)
+        
+        # Load dataset description for param_space
+        desc_file = os.path.join(datasets_dir, 'description.txt')
+        
+        # Create a simple param_space from the data columns
+        # The last column is typically the target value
+        columns = list(self._raw_data.columns)
+        self._param_names = columns[:-1]  # All but last column are parameters
+        self._target_name = columns[-1]   # Last column is target
+        
+        # Create simple bounds from data min/max
+        self._param_bounds = {}
+        for col in self._param_names:
+            self._param_bounds[col] = {
+                'low': float(self._raw_data[col].min()),
+                'high': float(self._raw_data[col].max())
+            }
+        
+        return True
 
     def __init__(
         self,
@@ -77,78 +142,96 @@ class OlympusDatasetWrapper(BenchmarkFunction):
         Initialize Olympus dataset wrapper.
 
         Args:
-            dataset_name: Name of the Olympus dataset (e.g., 'suzuki', 'buchwald_a')
+            dataset_name: Name of the Olympus dataset (e.g., 'suzuki', 'benzylation')
             use_train_set: Whether to use training set (False = use test set)
             negate: Whether to negate the function
             noise_std: Standard deviation of Gaussian noise
             **kwargs: Additional parameters
         """
-        # Import directly to avoid circular imports
-        import importlib
         import pandas as pd
 
         self.dataset_name = dataset_name
         self.use_train_set = use_train_set
+        self.olympus_dataset = None
+        self._data_loaded_successfully = False
 
-        # Try to load dataset, with fallback for NumPy compatibility issues
+        # Try multiple loading methods
+        load_success = False
+        load_error = None
+        
+        # Method 1: Try direct data loading (fastest, most reliable)
         try:
-            # Import Dataset class without going through olympus.__init__
-            dataset_module = importlib.import_module("olympus.datasets.dataset")
-            Dataset = dataset_module.Dataset
-
-            # Load specific dataset
-            self.olympus_dataset = Dataset(kind=dataset_name)
+            self._load_dataset_directly(dataset_name)
+            load_success = True
             self._data_loaded_successfully = True
+        except Exception as e1:
+            load_error = e1
+        
+        # Method 2: Try olympus Dataset class with monkey-patching
+        if not load_success:
+            try:
+                import importlib
+                dataset_module = importlib.import_module("olympus.datasets.dataset")
+                Dataset = dataset_module.Dataset
+                
+                # Monkey-patch the problematic split method
+                original_split = getattr(Dataset, 'create_train_validate_test_splits', None)
+                Dataset.create_train_validate_test_splits = lambda self, *args, **kwargs: None
+                
+                try:
+                    self.olympus_dataset = Dataset(kind=dataset_name)
+                    load_success = True
+                    self._data_loaded_successfully = True
+                finally:
+                    if original_split:
+                        Dataset.create_train_validate_test_splits = original_split
+            except Exception as e2:
+                load_error = e2
+        
+        if not load_success:
+            raise ImportError(f"Failed to load Olympus dataset {dataset_name}: {load_error}")
 
-        except (ValueError, Exception) as e:
-            # If loading fails due to NumPy issues, load data manually
-            if "inhomogeneous shape" in str(e) or "setting an array element with a sequence" in str(e):
-                # Load data manually without cross-validation splitting
-                self._load_dataset_manually(dataset_name)
-                self._data_loaded_successfully = False
-            else:
-                raise ImportError(f"Failed to load Olympus dataset {dataset_name}: {e}")
-
-        # Get parameter space
-        param_space = self.olympus_dataset.param_space
-
-        # Extract bounds
-        lower_bounds = []
-        upper_bounds = []
-        self.param_types = []
-
-        for param in param_space:
-            self.param_types.append(param.type)
-            if param.type == 'continuous':
-                lower_bounds.append(param.low)
-                upper_bounds.append(param.high)
-            elif param.type == 'discrete':
-                lower_bounds.append(0)
-                upper_bounds.append(len(param.options) - 1)
-            elif param.type == 'categorical':
-                lower_bounds.append(0)
-                upper_bounds.append(len(param.options) - 1)
-
-        bounds = torch.tensor([lower_bounds, upper_bounds], dtype=torch.float32)
-        dim = len(param_space)
-
-        # Store dataset information - handle both split and non-split cases
-        if isinstance(self.olympus_dataset.data, dict):
-            # Has train/test splits
+        # Get bounds and dimensions
+        if self.olympus_dataset is not None:
+            # Use olympus param_space
+            param_space = self.olympus_dataset.param_space
+            lower_bounds = []
+            upper_bounds = []
+            self.param_types = []
+            
+            for param in param_space:
+                self.param_types.append(param.type)
+                if param.type == 'continuous':
+                    lower_bounds.append(param.low)
+                    upper_bounds.append(param.high)
+                elif param.type == 'discrete':
+                    lower_bounds.append(0)
+                    upper_bounds.append(len(param.options) - 1)
+                elif param.type == 'categorical':
+                    lower_bounds.append(0)
+                    upper_bounds.append(len(param.options) - 1)
+            
+            dim = len(param_space)
             self._dataset_info = {
-                "num_train": len(self.olympus_dataset.data.get("train", [])),
-                "num_test": len(self.olympus_dataset.data.get("test", [])),
-                "param_space": param_space,
-                "dataset_type": self.olympus_dataset.dataset_type,
-            }
-        else:
-            # No splits, entire dataset
-            self._dataset_info = {
-                "num_train": len(self.olympus_dataset.data),
+                "num_train": len(self.olympus_dataset.data) if hasattr(self.olympus_dataset, 'data') else 0,
                 "num_test": 0,
                 "param_space": param_space,
-                "dataset_type": self.olympus_dataset.dataset_type,
+                "dataset_type": getattr(self.olympus_dataset, 'dataset_type', 'unknown'),
             }
+        else:
+            # Use directly loaded data
+            lower_bounds = [self._param_bounds[p]['low'] for p in self._param_names]
+            upper_bounds = [self._param_bounds[p]['high'] for p in self._param_names]
+            self.param_types = ['continuous'] * len(self._param_names)
+            dim = len(self._param_names)
+            self._dataset_info = {
+                "num_train": len(self._raw_data),
+                "num_test": 0,
+                "param_space": None,
+                "dataset_type": 'unknown',
+            }
+
+        bounds = torch.tensor([lower_bounds, upper_bounds], dtype=torch.float32)
 
         super().__init__(
             dim=dim,
@@ -217,31 +300,38 @@ class OlympusDatasetWrapper(BenchmarkFunction):
         Returns:
             Predictions array of shape (n_samples,)
         """
-        # Get dataset - handle both split and non-split cases
-        if hasattr(self.olympus_dataset, 'data'):
-            if isinstance(self.olympus_dataset.data, dict):
-                # Has train/test splits
-                if self.use_train_set:
-                    dataset = self.olympus_dataset.data.get("train", self.olympus_dataset.data)
+        # Handle directly loaded data (no olympus Dataset object)
+        if self.olympus_dataset is None and hasattr(self, '_raw_data'):
+            X_data = self._raw_data[self._param_names].values
+            y_data = self._raw_data[self._target_name].values
+        elif self.olympus_dataset is not None:
+            # Get dataset - handle both split and non-split cases
+            if hasattr(self.olympus_dataset, 'data'):
+                if isinstance(self.olympus_dataset.data, dict):
+                    # Has train/test splits
+                    if self.use_train_set:
+                        dataset = self.olympus_dataset.data.get("train", self.olympus_dataset.data)
+                    else:
+                        dataset = self.olympus_dataset.data.get("test", self.olympus_dataset.data.get("train", self.olympus_dataset.data))
                 else:
-                    dataset = self.olympus_dataset.data.get("test", self.olympus_dataset.data.get("train", self.olympus_dataset.data))
+                    # No splits, use entire dataset
+                    dataset = self.olympus_dataset.data
             else:
-                # No splits, use entire dataset
-                dataset = self.olympus_dataset.data
-        else:
-            raise ValueError("Dataset has no data attribute")
+                raise ValueError("Dataset has no data attribute")
 
-        # Extract X and y from dataset
-        param_names = [p.name for p in self.olympus_dataset.param_space]
+            # Extract X and y from dataset
+            param_names = [p.name for p in self.olympus_dataset.param_space]
 
-        # Handle different data structures
-        if hasattr(dataset, 'values'):
-            X_data = dataset[param_names].values
-            y_data = dataset[self.olympus_dataset.value_space[0].name].values
+            # Handle different data structures
+            if hasattr(dataset, 'values'):
+                X_data = dataset[param_names].values
+                y_data = dataset[self.olympus_dataset.value_space[0].name].values
+            else:
+                # If dataset is a DataFrame
+                X_data = dataset[param_names].to_numpy()
+                y_data = dataset[self.olympus_dataset.value_space[0].name].to_numpy()
         else:
-            # If dataset is a DataFrame
-            X_data = dataset[param_names].to_numpy()
-            y_data = dataset[self.olympus_dataset.value_space[0].name].to_numpy()
+            raise ValueError("No data available for prediction")
 
         # Find nearest neighbors
         results = []
@@ -254,76 +344,35 @@ class OlympusDatasetWrapper(BenchmarkFunction):
 
 
 # Define all Olympus datasets organized by category
+# NOTE: Only include datasets that are actually available in the olympus package
+# Available datasets (verified): alkox, benzylation, colors_bob, colors_n9, 
+# fullerenes, hplc, photo_pce10, photo_wf3, snar, suzuki
+# Reference: https://aspuru-guzik-group.github.io/olympus/classes/datasets/index.html
 OLYMPUS_DATASETS = {
     # Chemical Reactions
     "chemical_reactions": {
-        "buchwald_a": "Buchwald-Hartwig C-N cross-coupling reaction (variant A)",
-        "buchwald_b": "Buchwald-Hartwig C-N cross-coupling reaction (variant B)",
-        "buchwald_c": "Buchwald-Hartwig C-N cross-coupling reaction (variant C)",
-        "buchwald_d": "Buchwald-Hartwig C-N cross-coupling reaction (variant D)",
-        "buchwald_e": "Buchwald-Hartwig C-N cross-coupling reaction (variant E)",
         "suzuki": "Suzuki-Miyaura cross-coupling reaction",
-        "suzuki_edbo": "Suzuki reaction from EDBO paper",
-        "suzuki_i": "Suzuki reaction variant I",
-        "suzuki_ii": "Suzuki reaction variant II",
-        "suzuki_iii": "Suzuki reaction variant III",
-        "suzuki_iv": "Suzuki reaction variant IV",
-        "benzylation": "Benzylation reaction optimization",
+        "benzylation": "N-benzylation reaction optimization",
         "alkox": "Alkoxylation reaction",
         "snar": "SNAr nucleophilic aromatic substitution",
     },
 
     # Materials Science
     "materials": {
-        "perovskites": "Perovskite materials optimization",
-        "fullerenes": "Fullerene synthesis",
-        "dye_lasers": "Organic dye laser optimization",
-        "redoxmers": "Redox-active molecules",
+        "fullerenes": "Buckminsterfullerene adducts synthesis",
         "colors_bob": "Bob's color mixing dataset",
         "colors_n9": "N9 color optimization",
-        "thin_film": "Thin film deposition",
-        "crossed_barrel": "Crossed barrel optimization",
     },
 
     # Photovoltaics and Optoelectronics
     "photovoltaics": {
-        "photo_pce10": "Photovoltaic PCE10 optimization",
-        "photo_wf3": "Photovoltaic WF3 work function",
-        "p3ht": "P3HT polymer optimization",
-        "mmli_opv": "MMLI organic photovoltaic",
-    },
-
-    # Nanoparticles
-    "nanoparticles": {
-        "agnp": "Silver nanoparticle synthesis",
-        "lnp3": "Lipid nanoparticle formulation",
-        "autoam": "Automated additive manufacturing",
-    },
-
-    # Electrochemistry
-    "electrochemistry": {
-        "electrochem": "Electrochemical optimization",
-        "oer_plate_3496": "Oxygen evolution reaction plate 3496",
-        "oer_plate_3851": "Oxygen evolution reaction plate 3851",
-        "oer_plate_3860": "Oxygen evolution reaction plate 3860",
-        "oer_plate_4098": "Oxygen evolution reaction plate 4098",
-    },
-
-    # Liquids and Solvents
-    "liquids": {
-        "liquid_ace_100": "Acetone properties (100)",
-        "liquid_dce": "Dichloroethane properties",
-        "liquid_hep_100": "Heptane properties (100)",
-        "liquid_thf_100": "THF properties (100)",
-        "liquid_thf_500": "THF properties (500)",
-        "liquid_toluene": "Toluene properties",
-        "liquid_water": "Water properties",
+        "photo_pce10": "Photobleaching PCE10 optimization",
+        "photo_wf3": "Photobleaching WF3 work function",
     },
 
     # Other
     "other": {
         "hplc": "HPLC optimization",
-        "vapdiff_crystal": "Vapor diffusion crystallization",
     },
 }
 
@@ -385,28 +434,53 @@ def create_olympus_photovoltaics_suite() -> BenchmarkSuite:
 
 
 # Convenience classes for commonly used datasets
-class OlympusBuchwaldAFunction(OlympusDatasetWrapper):
-    """Olympus Buchwald-Hartwig reaction dataset A."""
-    def __init__(self, **kwargs):
-        super().__init__(dataset_name="buchwald_a", **kwargs)
-
-
+# Only include datasets that are actually available in olympus
 class OlympusSuzukiFunction(OlympusDatasetWrapper):
     """Olympus Suzuki-Miyaura reaction dataset."""
     def __init__(self, **kwargs):
         super().__init__(dataset_name="suzuki", **kwargs)
 
 
-class OlympusPerovskitesFunction(OlympusDatasetWrapper):
-    """Olympus perovskites materials dataset."""
+class OlympusBenzylationFunction(OlympusDatasetWrapper):
+    """Olympus N-benzylation reaction dataset."""
     def __init__(self, **kwargs):
-        super().__init__(dataset_name="perovskites", **kwargs)
+        super().__init__(dataset_name="benzylation", **kwargs)
 
 
-class OlympusDyeLasersFunction(OlympusDatasetWrapper):
-    """Olympus dye lasers dataset."""
+class OlympusAlkoxFunction(OlympusDatasetWrapper):
+    """Olympus alkoxylation reaction dataset."""
     def __init__(self, **kwargs):
-        super().__init__(dataset_name="dye_lasers", **kwargs)
+        super().__init__(dataset_name="alkox", **kwargs)
+
+
+class OlympusSnarFunction(OlympusDatasetWrapper):
+    """Olympus SNAr reaction dataset."""
+    def __init__(self, **kwargs):
+        super().__init__(dataset_name="snar", **kwargs)
+
+
+class OlympusFullerenesFunction(OlympusDatasetWrapper):
+    """Olympus Buckminsterfullerene adducts dataset."""
+    def __init__(self, **kwargs):
+        super().__init__(dataset_name="fullerenes", **kwargs)
+
+
+class OlympusHplcFunction(OlympusDatasetWrapper):
+    """Olympus HPLC optimization dataset."""
+    def __init__(self, **kwargs):
+        super().__init__(dataset_name="hplc", **kwargs)
+
+
+class OlympusPhotoPce10Function(OlympusDatasetWrapper):
+    """Olympus photobleaching PCE10 dataset."""
+    def __init__(self, **kwargs):
+        super().__init__(dataset_name="photo_pce10", **kwargs)
+
+
+class OlympusPhotoWf3Function(OlympusDatasetWrapper):
+    """Olympus photobleaching WF3 dataset."""
+    def __init__(self, **kwargs):
+        super().__init__(dataset_name="photo_wf3", **kwargs)
 
 
 __all__ = [
@@ -415,9 +489,13 @@ __all__ = [
     "create_olympus_chemistry_suite",
     "create_olympus_materials_suite",
     "create_olympus_photovoltaics_suite",
-    "OlympusBuchwaldAFunction",
     "OlympusSuzukiFunction",
-    "OlympusPerovskitesFunction",
-    "OlympusDyeLasersFunction",
+    "OlympusBenzylationFunction",
+    "OlympusAlkoxFunction",
+    "OlympusSnarFunction",
+    "OlympusFullerenesFunction",
+    "OlympusHplcFunction",
+    "OlympusPhotoPce10Function",
+    "OlympusPhotoWf3Function",
     "OLYMPUS_DATASETS",
 ]

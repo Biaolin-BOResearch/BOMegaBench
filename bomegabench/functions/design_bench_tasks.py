@@ -36,7 +36,7 @@ design_bench_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname
 if design_bench_path not in sys.path:
     sys.path.insert(0, design_bench_path)
 
-from bomegabench.core import BenchmarkFunction, BenchmarkSuite
+from ..core import BenchmarkFunction, BenchmarkSuite
 
 
 class DesignBenchWrapper(BenchmarkFunction):
