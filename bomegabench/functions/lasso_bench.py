@@ -81,8 +81,8 @@ class LassoBenchSyntheticFunction(BenchmarkFunction):
         
     def _evaluate_true(self, X: Tensor) -> Tensor:
         """Evaluate the function."""
-        # Convert torch tensor to numpy
-        X_np = X.detach().cpu().numpy()
+        # Convert torch tensor to numpy (LassoBench requires float64)
+        X_np = X.detach().cpu().numpy().astype(np.float64)
         
         # Handle batch evaluation
         if X_np.ndim == 1:
@@ -169,8 +169,8 @@ class LassoBenchRealFunction(BenchmarkFunction):
         
     def _evaluate_true(self, X: Tensor) -> Tensor:
         """Evaluate the function."""
-        # Convert torch tensor to numpy
-        X_np = X.detach().cpu().numpy()
+        # Convert torch tensor to numpy (LassoBench requires float64)
+        X_np = X.detach().cpu().numpy().astype(np.float64)
         
         # Handle batch evaluation
         if X_np.ndim == 1:
